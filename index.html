@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎱 Biljartclub Wedstrijdplanner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0f0f13;
+      color: #e8e0d4;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: linear-gradient(135deg, #1a1208 0%, #0f0f13 100%);
+      border-bottom: 2px solid #8B6914;
+      padding: 18px 24px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    #header .logo { display: flex; align-items: center; gap: 12px; }
+    #header .logo-icon { font-size: 28px; }
+    #header .logo-title { font-size: 22px; font-weight: bold; color: #D4A017; letter-spacing: 1px; }
+    #header .logo-sub { font-size: 11px; color: #8a7a5a; letter-spacing: 2px; text-transform: uppercase; }
+
+    nav { display: flex; gap: 4px; flex-wrap: wrap; }
+    nav button {
+      padding: 7px 14px;
+      background: transparent;
+      color: #8a7a5a;
+      border: 1px solid #2a2218;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    nav button.active {
+      background: #8B6914;
+      color: #fff;
+      border-color: #8B6914;
+    }
+
+    /* ── Loading overlay ── */
+    #loading {
+      position: fixed; inset: 0;
+      background: #0f0f13;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      z-index: 999;
+      font-size: 18px; color: #8a7a5a;
+    }
+    #loading .spinner {
+      font-size: 40px;
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Setup screen ── */
+    #setup-screen {
+      max-width: 520px;
+      margin: 60px auto;
+      padding: 32px;
+      background: #16161e;
+      border: 1px solid #2a2a38;
+      border-radius: 16px;
+      display: none;
+    }
+    #setup-screen h2 { color: #D4A017; margin-bottom: 8px; font-size: 20px; }
+    #setup-screen p { color: #8a7a6a; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+    #setup-screen label { display: block; color: #a0a0b8; font-size: 13px; margin-bottom: 6px; margin-top: 14px; }
+    #setup-screen input {
+      width: 100%; padding: 9px 12px;
+      background: #1a1a26; border: 1px solid #3a3a4a;
+      border-radius: 6px; color: #e8e0d4; font-size: 13px; font-family: inherit;
+      outline: none;
+    }
+    #setup-screen input:focus { border-color: #8B6914; }
+    #setup-error { color: #c07070; font-size: 13px; margin-top: 10px; min-height: 20px; }
+    #setup-btn {
+      margin-top: 20px; width: 100%; padding: 11px;
+      background: linear-gradient(135deg, #8B6914, #b8850a);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 15px; font-family: inherit; cursor: pointer; font-weight: bold;
+    }
+
+    /* ── Main container ── */
+    #app { display: none; }
+    #main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+    }
+    .topbar-info { font-size: 14px; color: #8a7a5a; }
+    .topbar-info strong { color: #D4A017; font-size: 18px; }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 8px; font-size: 12px;
+      margin-left: 10px;
+    }
+    .badge-green { background: #1a2e14; color: #4a8a4a; border: 1px solid #4a8a4a44; }
+    .badge-blue  { background: #1a1a2e; color: #4a4a8a; border: 1px solid #4a4a8a44; }
+    .badge-red   { background: #2e1a1a; color: #8a4a4a; border: 1px solid #8a4a4a44; }
+    .badge-orange{ background: #2a1e10; color: #8a6a3a; border: 1px solid #8a6a3a44; }
+
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    button.btn {
+      padding: 6px 12px;
+      border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    button.btn:hover { opacity: 0.85; }
+    button.btn-gray  { background: #2a2218; color: #8a7a5a; border: 1px solid #8a7a5a33; }
+    button.btn-green { background: #1a2a1a; color: #5a9a5a; border: 1px solid #5a9a5a33; }
+    button.btn-gold  { background: #2a2218; color: #D4A017; border: 1px solid #D4A01733; }
+    button.btn-save  {
+      padding: 6px 14px;
+      background: #8B6914; color: #fff;
+      border: 1px solid #8B6914; border-radius: 6px;
+      cursor: pointer; font-size: 13px; font-family: inherit;
+    }
+    button.btn-save.saved {
+      background: #1a2e14; color: #4a8a4a; border-color: #3a5a3a; cursor: default;
+    }
+    button.btn-save:disabled { cursor: default; }
+
+    /* ── Search ── */
+    #search-input {
+      width: 100%; padding: 9px 14px;
+      background: #1a1a22; border: 1px solid #2a2a38;
+      color: #e8e0d4; border-radius: 8px;
+      font-size: 14px; font-family: inherit; outline: none;
+      margin-bottom: 14px;
+    }
+
+    /* ── Add member form ── */
+    #add-member-form {
+      display: none;
+      background: #16201a; border: 1px solid #3a5a3a; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 14px;
+      align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    #add-member-form.visible { display: flex; }
+    #add-member-form label { color: #6a9a6a; font-size: 13px; white-space: nowrap; }
+    #add-member-form input {
+      flex: 1; min-width: 180px; padding: 7px 12px;
+      background: #0f1a12; border: 1px solid #3a5a3a;
+      border-radius: 6px; color: #e8e0d4; font-size: 14px; font-family: inherit; outline: none;
+    }
+    #add-member-form input.error { border-color: #8a4a4a; }
+    #add-member-error { color: #c07070; font-size: 12px; width: 100%; min-height: 16px; }
+    #add-member-form .btn-add {
+      padding: 7px 16px; background: #3a6a3a; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;
+    }
+
+    /* ── Member grid ── */
+    #member-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 8px;
+    }
+    .member-item { position: relative; }
+    .member-btn {
+      width: 100%; padding: 10px 36px 10px 14px;
+      background: #16161e; border: 1px solid #2a2a38;
+      border-radius: 8px; color: #8a7a6a;
+      cursor: pointer; text-align: left; font-size: 14px; font-family: inherit;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.15s;
+    }
+    .member-btn.present {
+      background: linear-gradient(135deg, #1a2e14, #223a1a);
+      border-color: #4a7a3a; color: #7ec87e;
+    }
+    .member-checkbox {
+      width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+      border: 2px solid #3a3a4a; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .member-btn.present .member-checkbox {
+      border-color: #4a7a3a; background: #4a7a3a;
+    }
+    .member-checkbox-tick { color: #fff; font-size: 11px; display: none; }
+    .member-btn.present .member-checkbox-tick { display: block; }
+    .member-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .member-delete {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: none;
+      color: #4a3a3a; width: 22px; height: 22px; border-radius: 4px;
+      cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .member-delete.confirming {
+      background: #5a2020; border: 1px solid #8a4a4a; color: #e07070;
+    }
+
+    /* ── Generate button ── */
+    #generate-btn {
+      display: block; margin: 24px auto 0;
+      padding: 12px 40px;
+      background: linear-gradient(135deg, #8B6914, #b8850a);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 16px; font-family: inherit; cursor: pointer; font-weight: bold;
+      box-shadow: 0 4px 16px rgba(139,105,20,0.4);
+    }
+    #generate-btn:disabled {
+      background: #2a2218; color: #4a4030; box-shadow: none; cursor: default;
+    }
+
+    /* ── Schedule ── */
+    #schedule-empty {
+      text-align: center; padding: 60px; color: #4a4a5a;
+    }
+    #schedule-empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .schedule-grid { grid-template-columns: 1fr; }
+    }
+
+    .schedule-col {
+      background: #16161e; border: 1px solid #2a2a38;
+      border-radius: 12px; overflow: hidden;
+    }
+    .schedule-col-header {
+      background: linear-gradient(135deg, #1a1208, #1e1810);
+      padding: 10px 16px; border-bottom: 1px solid #2a2218;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .schedule-col-header strong { color: #D4A017; }
+    .schedule-col-header span { font-size: 12px; color: #6a6a8a; }
+    .schedule-col-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+    .match-card {
+      background: #1a1a26; border: 1px solid #2a2a3a;
+      border-radius: 8px; padding: 9px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .match-card.repeat { background: #1e1010; border-color: #5a2a2a; }
+    .match-num { color: #4a4a6a; font-size: 12px; min-width: 22px; }
+    .match-players { flex: 1; }
+    .match-p { font-size: 14px; color: #d4cfc0; }
+    .match-card.repeat .match-p { color: #c08080; }
+    .match-vs { font-size: 11px; color: #4a4a6a; margin: 2px 0; }
+    .match-warn { color: #8a4a4a; font-size: 16px; }
+
+    /* ── History ── */
+    .history-session {
+      margin-bottom: 12px; background: #16161e;
+      border: 1px solid #2a2a3a; border-radius: 12px; overflow: hidden;
+    }
+    .history-session.old { border-color: #1e1e24; opacity: 0.6; }
+    .history-header {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #1a1208, #1a1a22);
+      border-bottom: 1px solid #22222e;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
+    }
+    .history-date { color: #D4A017; font-weight: bold; font-size: 14px; }
+    .history-period-tag {
+      margin-left: 8px; font-size: 11px; color: #4a8a4a;
+      background: #1a2e1a; padding: 1px 6px; border-radius: 6px;
+    }
+    .history-meta { font-size: 12px; color: #6a6a8a; display: flex; align-items: center; gap: 8px; }
+    .history-body { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .history-match {
+      background: #1e1e2a; border: 1px solid #2a2a3a;
+      border-radius: 6px; padding: 3px 10px; font-size: 12px; color: #a0a0b8;
+    }
+    .btn-delete-session {
+      background: transparent; border: 1px solid #3a2a2a; color: #6a4a4a;
+      padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: inherit;
+    }
+
+    /* ── Confirm hint ── */
+    #confirm-hint {
+      margin-top: 10px; font-size: 12px; color: #8a6a4a; text-align: center; min-height: 18px;
+    }
+
+    /* ── Empty states ── */
+    .empty-state {
+      text-align: center; padding: 60px; color: #4a4a5a;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner">🎱</div>
+  <div>Laden…</div>
+</div>
+
+<!-- Firebase setup screen -->
+<div id="setup-screen">
+  <h2>🎱 Biljartclub instellen</h2>
+  <p>
+    Voer hieronder je Firebase-configuratie in. Je vindt deze gegevens in de
+    <a href="https://console.firebase.google.com" target="_blank" style="color:#D4A017">Firebase Console</a>
+    onder <em>Project-instellingen → Jouw apps → Webconfiguratie</em>.
+  </p>
+  <label>API Key</label>
+  <input id="cfg-apiKey" placeholder="AIza..." />
+  <label>Auth Domain</label>
+  <input id="cfg-authDomain" placeholder="jouwproject.firebaseapp.com" />
+  <label>Project ID</label>
+  <input id="cfg-projectId" placeholder="jouwproject" />
+  <label>App ID</label>
+  <input id="cfg-appId" placeholder="1:12345:web:abcdef" />
+  <div id="setup-error"></div>
+  <button id="setup-btn" onclick="saveConfig()">Verbinding testen & opslaan</button>
+</div>
+
+<!-- Main app -->
+<div id="app">
+  <div id="header">
+    <div class="logo">
+      <div class="logo-icon">🎱</div>
+      <div>
+        <div class="logo-title">Biljartclub</div>
+        <div class="logo-sub">Wedstrijdplanner</div>
+      </div>
+    </div>
+    <nav>
+      <button class="active" onclick="switchView('attendance')">📋 Aanwezig</button>
+      <button onclick="switchView('schedule')">🏆 Schema</button>
+      <button onclick="switchView('history')">📜 Historie</button>
+    </nav>
+  </div>
+
+  <div id="main">
+
+    <!-- ATTENDANCE VIEW -->
+    <div id="view-attendance" class="view active">
+      <div class="topbar">
+        <div class="topbar-info">
+          <strong id="present-count">0</strong>
+          <span id="present-total"> / 0 aanwezig</span>
+          <span id="present-badge" class="badge badge-green" style="display:none"></span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-gray" onclick="selectAll()">Alles</button>
+          <button class="btn btn-gray" onclick="clearAll()">Wissen</button>
+          <button class="btn btn-green" onclick="toggleAddMember()">+ Nieuw lid</button>
+        </div>
+      </div>
+
+      <!-- Add member form -->
+      <div id="add-member-form">
+        <label>Naam lid:</label>
+        <input id="new-member-input" placeholder="Voor- en achternaam"
+          onkeydown="handleAddKey(event)" oninput="clearAddError()" />
+        <button class="btn-add" onclick="addMember()">Toevoegen</button>
+        <button class="btn btn-gray" onclick="toggleAddMember()">Annuleren</button>
+        <div id="add-member-error"></div>
+      </div>
+
+      <input id="search-input" placeholder="Zoek lid…" oninput="renderMembers()" />
+
+      <div id="member-grid"></div>
+      <div id="confirm-hint"></div>
+
+      <button id="generate-btn" onclick="generateSchedule()" disabled>🎱 Genereer Schema</button>
+    </div>
+
+    <!-- SCHEDULE VIEW -->
+    <div id="view-schedule" class="view">
+      <div id="schedule-empty" style="display:none">
+        <div class="empty-icon">🎱</div>
+        <div>Ga naar <b style="color:#8a7a6a">Aanwezig</b> om een schema te genereren</div>
+      </div>
+      <div id="schedule-content" style="display:none">
+        <div class="topbar">
+          <div class="btn-row" id="schedule-badges"></div>
+          <div class="btn-row">
+            <button class="btn btn-gold" onclick="regenerate()">🔄 Opnieuw</button>
+            <button class="btn-save" id="save-btn" onclick="confirmSchedule()">💾 Bevestig & Sla Op</button>
+          </div>
+        </div>
+        <div class="schedule-grid" id="schedule-grid"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div id="view-history" class="view">
+      <div id="history-empty" class="empty-state" style="display:none">
+        <div class="icon">📜</div>
+        <div>Nog geen gespeelde avonden</div>
+      </div>
+      <div id="history-topbar" class="topbar" style="display:none">
+        <span style="color:#8a7a6a;font-size:14px" id="history-count"></span>
+        <span class="badge badge-orange" id="period-label"></span>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const PERIOD_WEEKS = 7;
+  const DEFAULT_MEMBERS = [
+    "Stephan Deen","Bart Kuin","Chris Appelman","Dennis Swart","Fred Groot",
+    "Harold Visser","Jargo Grooteman","Jeroen Kuin","Joris Botman","Kees Kolenberg",
+    "Klaas Jan Rusting","Marco Bakker","Mark Schuitemaker","Michel van der Sluis",
+    "Nico Kok","Peter Schuitemaker","Rimbert Morsch","Rob Kolenberg","Rob Sijm",
+    "Rob Stavenuiter","Ron Zwan","Ronald Deen","Ronald Koomen","Siem Kolken",
+    "Thomas Grent","Wouter Steltenpool"
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let db = null;
+  let members = [...DEFAULT_MEMBERS];
+  let history = [];
+  let present = new Set();
+  let schedule = null;
+  let saved = false;
+  let confirmDelete = null;
+
+  // ── Firebase config helpers ────────────────────────────────────────────────
+  function loadConfig() {
+    try { return JSON.parse(localStorage.getItem("biljart_firebase_config")); }
+    catch { return null; }
+  }
+
+  window.saveConfig = async function() {
+    const cfg = {
+      apiKey:      document.getElementById("cfg-apiKey").value.trim(),
+      authDomain:  document.getElementById("cfg-authDomain").value.trim(),
+      projectId:   document.getElementById("cfg-projectId").value.trim(),
+      appId:       document.getElementById("cfg-appId").value.trim(),
+    };
+    if (!cfg.apiKey || !cfg.projectId) {
+      document.getElementById("setup-error").textContent = "Vul minimaal API Key en Project ID in.";
+      return;
+    }
+    document.getElementById("setup-error").textContent = "Verbinding testen…";
+    try {
+      const app = initializeApp(cfg, "test");
+      const testDb = getFirestore(app);
+      await getDoc(doc(testDb, "biljart", "members"));
+      localStorage.setItem("biljart_firebase_config", JSON.stringify(cfg));
+      location.reload();
+    } catch(e) {
+      document.getElementById("setup-error").textContent = "Verbinding mislukt: " + e.message;
+    }
+  };
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  async function init() {
+    const cfg = loadConfig();
+    if (!cfg) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("setup-screen").style.display = "block";
+      return;
+    }
+
+    try {
+      const app = initializeApp(cfg);
+      db = getFirestore(app);
+
+      // Load initial data
+      const [mSnap, hSnap] = await Promise.all([
+        getDoc(doc(db, "biljart", "members")),
+        getDoc(doc(db, "biljart", "history")),
+      ]);
+      if (mSnap.exists()) members = mSnap.data().list;
+      if (hSnap.exists()) history = hSnap.data().list;
+
+      // Real-time listeners
+      onSnapshot(doc(db, "biljart", "members"), snap => {
+        if (snap.exists()) { members = snap.data().list; renderMembers(); renderHistory(); }
+      });
+      onSnapshot(doc(db, "biljart", "history"), snap => {
+        if (snap.exists()) { history = snap.data().list; renderHistory(); renderSchedule(); }
+      });
+
+    } catch(e) {
+      // Firebase failed — fallback to localStorage
+      console.warn("Firebase niet beschikbaar, gebruik localStorage:", e);
+      try { members = JSON.parse(localStorage.getItem("biljart_members")) || DEFAULT_MEMBERS; } catch{}
+      try { history = JSON.parse(localStorage.getItem("biljart_history")) || []; } catch{}
+    }
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    renderMembers();
+    renderHistory();
+    renderScheduleView();
+  }
+
+  // ── Persist ────────────────────────────────────────────────────────────────
+  async function persistMembers() {
+    if (db) await setDoc(doc(db, "biljart", "members"), { list: members });
+    localStorage.setItem("biljart_members", JSON.stringify(members));
+  }
+  async function persistHistory() {
+    if (db) await setDoc(doc(db, "biljart", "history"), { list: history });
+    localStorage.setItem("biljart_history", JSON.stringify(history));
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function matchKey(a, b) { return [a, b].sort().join("|||"); }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function periodStart() {
+    const d = new Date();
+    d.setDate(d.getDate() - PERIOD_WEEKS * 7);
+    return d;
+  }
+
+  function pairCountPeriod() {
+    const cutoff = periodStart();
+    const counts = {};
+    for (const s of history) {
+      if (new Date(s.date) >= cutoff) {
+        for (const m of s.matches) {
+          const k = matchKey(m.p1, m.p2);
+          counts[k] = (counts[k] || 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }
+
+  // ── Scheduling algorithm ───────────────────────────────────────────────────
+  function buildSchedule(presentArr) {
+    const cutoff = periodStart();
+    const recentPairs = new Set();
+    const allTimeCounts = {};
+    for (const s of history) {
+      for (const m of s.matches) {
+        const k = matchKey(m.p1, m.p2);
+        allTimeCounts[k] = (allTimeCounts[k] || 0) + 1;
+        if (new Date(s.date) >= cutoff) recentPairs.add(k);
+      }
+    }
+
+    const n = presentArr.length;
+    let bestMatches = null, bestScore = Infinity;
+
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const circle = shuffle(presentArr);
+      const matches = [];
+      let score = 0;
+      for (let i = 0; i < n; i++) {
+        const p1 = circle[i], p2 = circle[(i + 1) % n];
+        const k = matchKey(p1, p2);
+        matches.push({ p1, p2 });
+        if (recentPairs.has(k)) score += 10;
+        score += (allTimeCounts[k] || 0);
+      }
+      if (score < bestScore) { bestScore = score; bestMatches = matches; }
+    }
+
+    const half = Math.ceil(n / 2);
+    return {
+      matches: bestMatches,
+      wedstrijd1: bestMatches.slice(0, half),
+      wedstrijd2: bestMatches.slice(half),
+      score: bestScore,
+    };
+  }
+
+  // ── View switching ─────────────────────────────────────────────────────────
+  window.switchView = function(view) {
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + view).classList.add("active");
+    document.querySelectorAll("nav button").forEach((b, i) => {
+      b.classList.toggle("active", ["attendance","schedule","history"][i] === view);
+    });
+    if (view === "history") renderHistory();
+    if (view === "schedule") renderScheduleView();
+  };
+
+  // ── Members ────────────────────────────────────────────────────────────────
+  window.renderMembers = function() {
+    const query = document.getElementById("search-input").value.toLowerCase();
+    const filtered = members.filter(m => m.toLowerCase().includes(query));
+    const grid = document.getElementById("member-grid");
+    grid.innerHTML = "";
+
+    filtered.forEach(name => {
+      const isPresent = present.has(name);
+      const isConfirming = confirmDelete === name;
+
+      const item = document.createElement("div");
+      item.className = "member-item";
+
+      const btn = document.createElement("button");
+      btn.className = "member-btn" + (isPresent ? " present" : "");
+      btn.onclick = () => { confirmDelete = null; togglePresent(name); };
+      btn.innerHTML = `
+        <div class="member-checkbox">
+          <span class="member-checkbox-tick">✓</span>
+        </div>
+        <span class="member-name">${name}</span>
+      `;
+
+      const del = document.createElement("button");
+      del.className = "member-delete" + (isConfirming ? " confirming" : "");
+      del.title = isConfirming ? "Klik nogmaals om te bevestigen" : "Verwijder lid";
+      del.textContent = isConfirming ? "✓" : "×";
+      del.onclick = (e) => { e.stopPropagation(); handleDeleteMember(name); };
+
+      item.appendChild(btn);
+      item.appendChild(del);
+      grid.appendChild(item);
+    });
+
+    if (filtered.length === 0 && query) {
+      grid.innerHTML = `<div style="color:#4a4a5a;padding:20px;text-align:center;font-size:14px">Geen leden gevonden voor "${query}"</div>`;
+    }
+
+    // Update count
+    document.getElementById("present-count").textContent = present.size;
+    document.getElementById("present-total").textContent = ` / ${members.length} aanwezig`;
+    const badge = document.getElementById("present-badge");
+    if (present.size >= 2) {
+      badge.style.display = "inline-flex";
+      badge.textContent = `${present.size} wedstrijden · iedereen speelt 2×`;
+    } else {
+      badge.style.display = "none";
+    }
+    document.getElementById("generate-btn").disabled = present.size < 2;
+  };
+
+  window.togglePresent = function(name) {
+    present.has(name) ? present.delete(name) : present.add(name);
+    schedule = null; saved = false;
+    renderMembers();
+  };
+
+  window.selectAll = function() {
+    present = new Set(members); schedule = null; saved = false; renderMembers();
+  };
+  window.clearAll = function() {
+    present = new Set(); schedule = null; saved = false; renderMembers();
+  };
+
+  // ── Add member ─────────────────────────────────────────────────────────────
+  window.toggleAddMember = function() {
+    const form = document.getElementById("add-member-form");
+    form.classList.toggle("visible");
+    if (form.classList.contains("visible")) {
+      document.getElementById("new-member-input").focus();
+    } else {
+      document.getElementById("new-member-input").value = "";
+      document.getElementById("add-member-error").textContent = "";
+    }
+  };
+
+  window.handleAddKey = function(e) {
+    if (e.key === "Enter") addMember();
+    if (e.key === "Escape") toggleAddMember();
+  };
+  window.clearAddError = function() {
+    document.getElementById("add-member-error").textContent = "";
+    document.getElementById("new-member-input").classList.remove("error");
+  };
+
+  window.addMember = async function() {
+    const input = document.getElementById("new-member-input");
+    const name = input.value.trim();
+    const errEl = document.getElementById("add-member-error");
+    if (!name) { errEl.textContent = "Voer een naam in."; input.classList.add("error"); return; }
+    if (members.some(m => m.toLowerCase() === name.toLowerCase())) {
+      errEl.textContent = "Dit lid bestaat al."; input.classList.add("error"); return;
+    }
+    members = [...members, name].sort((a, b) =>
+      a.split(" ").pop().localeCompare(b.split(" ").pop(), "nl")
+    );
+    await persistMembers();
+    input.value = "";
+    errEl.textContent = "";
+    toggleAddMember();
+    renderMembers();
+  };
+
+  // ── Delete member ──────────────────────────────────────────────────────────
+  window.handleDeleteMember = async function(name) {
+    if (confirmDelete === name) {
+      members = members.filter(m => m !== name);
+      present.delete(name);
+      confirmDelete = null;
+      schedule = null;
+      document.getElementById("confirm-hint").textContent = "";
+      await persistMembers();
+      renderMembers();
+    } else {
+      confirmDelete = name;
+      document.getElementById("confirm-hint").textContent =
+        `Klik nogmaals op × bij "${name}" om te bevestigen, of ergens anders om te annuleren.`;
+      renderMembers();
+    }
+  };
+
+  // Click away to cancel delete confirm
+  document.body.addEventListener("click", e => {
+    if (confirmDelete && !e.target.closest(".member-delete")) {
+      confirmDelete = null;
+      document.getElementById("confirm-hint").textContent = "";
+      renderMembers();
+    }
+  });
+
+  // ── Schedule ───────────────────────────────────────────────────────────────
+  window.generateSchedule = function() {
+    if (present.size < 2) return;
+    schedule = buildSchedule([...present]);
+    saved = false;
+    renderScheduleView();
+    switchView("schedule");
+  };
+
+  window.regenerate = function() {
+    schedule = buildSchedule([...present]);
+    saved = false;
+    renderScheduleView();
+  };
+
+  window.confirmSchedule = async function() {
+    if (!schedule || saved) return;
+    const session = {
+      date: new Date().toISOString(),
+      players: [...present],
+      matches: schedule.matches.map(({ p1, p2 }) => ({ p1, p2 })),
+    };
+    history = [session, ...history];
+    await persistHistory();
+    saved = true;
+    renderScheduleView();
+  };
+
+  function renderScheduleView() {
+    const emptyEl = document.getElementById("schedule-empty");
+    const contentEl = document.getElementById("schedule-content");
+
+    if (!schedule) {
+      emptyEl.style.display = "block";
+      contentEl.style.display = "none";
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    contentEl.style.display = "block";
+
+    // Badges
+    const periodCounts = pairCountPeriod();
+    const conflicts = schedule.matches.filter(m => periodCounts[matchKey(m.p1, m.p2)] > 0).length;
+    const badgesEl = document.getElementById("schedule-badges");
+    badgesEl.innerHTML = `
+      <span class="badge badge-green">${present.size} spelers</span>
+      <span class="badge badge-blue">${schedule.matches.length} wedstrijden · iedereen 2×</span>
+      ${conflicts > 0
+        ? `<span class="badge badge-red">⚠ ${conflicts} herhal${conflicts === 1 ? "ing" : "ingen"} in periode</span>`
+        : `<span class="badge badge-green">✓ Geen herhalingen in periode</span>`}
+    `;
+
+    // Save button
+    const saveBtn = document.getElementById("save-btn");
+    saveBtn.textContent = saved ? "✓ Opgeslagen" : "💾 Bevestig & Sla Op";
+    saveBtn.className = "btn-save" + (saved ? " saved" : "");
+    saveBtn.disabled = saved;
+
+    // Match columns
+    const grid = document.getElementById("schedule-grid");
+    grid.innerHTML = "";
+    [
+      { label: "Wedstrijd 1", matches: schedule.wedstrijd1 },
+      { label: "Wedstrijd 2", matches: schedule.wedstrijd2 },
+    ].forEach(({ label, matches }) => {
+      const col = document.createElement("div");
+      col.className = "schedule-col";
+      col.innerHTML = `
+        <div class="schedule-col-header">
+          <strong>${label}</strong>
+          <span>${matches.length} duels</span>
+        </div>
+        <div class="schedule-col-body">
+          ${matches.map((m, i) => {
+            const repeat = periodCounts[matchKey(m.p1, m.p2)] > 0;
+            return `
+              <div class="match-card${repeat ? " repeat" : ""}">
+                <div class="match-num">${i + 1}.</div>
+                <div class="match-players">
+                  <div class="match-p">${m.p1}</div>
+                  <div class="match-vs">vs</div>
+                  <div class="match-p">${m.p2}</div>
+                </div>
+                ${repeat ? '<div class="match-warn" title="Al gespeeld in huidige periode">⚠</div>' : ""}
+              </div>`;
+          }).join("")}
+        </div>
+      `;
+      grid.appendChild(col);
+    });
+  }
+
+  window.renderSchedule = renderScheduleView;
+
+  // ── History ────────────────────────────────────────────────────────────────
+  window.renderHistory = function() {
+    const cutoff = periodStart();
+    const emptyEl = document.getElementById("history-empty");
+    const topbarEl = document.getElementById("history-topbar");
+    const listEl = document.getElementById("history-list");
+
+    if (history.length === 0) {
+      emptyEl.style.display = "block";
+      topbarEl.style.display = "none";
+      listEl.innerHTML = "";
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    topbarEl.style.display = "flex";
+    document.getElementById("history-count").textContent =
+      `${history.length} gespeelde avond${history.length !== 1 ? "en" : ""}`;
+    document.getElementById("period-label").textContent = `Periode: ${PERIOD_WEEKS} weken`;
+
+    listEl.innerHTML = history.map((session, idx) => {
+      const d = new Date(session.date);
+      const inPeriod = d >= cutoff;
+      const dateStr = d.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      return `
+        <div class="history-session${inPeriod ? "" : " old"}">
+          <div class="history-header">
+            <div>
+              <span class="history-date">${dateStr}</span>
+              ${inPeriod ? '<span class="history-period-tag">huidige periode</span>' : ""}
+            </div>
+            <div class="history-meta">
+              <span>${session.players?.length || "?"} spelers · ${session.matches.length} wedstr.</span>
+              <button class="btn-delete-session" onclick="deleteSession(${idx})">✕</button>
+            </div>
+          </div>
+          <div class="history-body">
+            ${session.matches.map(m => `<span class="history-match">${m.p1} vs ${m.p2}</span>`).join("")}
+          </div>
+        </div>`;
+    }).join("");
+  };
+
+  window.deleteSession = async function(idx) {
+    history = history.filter((_, i) => i !== idx);
+    await persistHistory();
+    renderHistory();
+  };
+
+  // ── Start ──────────────────────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>
