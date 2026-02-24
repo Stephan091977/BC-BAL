@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>🎱 Biljartclub Wedstrijdplanner</title>
+  <title>🎱 BC BAL Wedstrijdentool</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { min-height: 100vh; background: #0f0f13; color: #e8e0d4; font-family: Georgia, 'Times New Roman', serif; }
@@ -176,11 +176,73 @@
     .btn-delete-session { background: transparent; border: 1px solid #3a2a2a; color: #6a4a4a; padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: inherit; }
     .empty-state { text-align: center; padding: 60px; color: #4a4a5a; }
     .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; align-items: center; justify-content: center; }
+    #admin-overlay.visible { display: flex; }
+    #admin-box { background: #16161e; border: 1px solid #8B6914; border-radius: 16px; max-width: 360px; width: 100%; padding: 28px; }
+    #admin-box h2 { color: #D4A017; font-size: 18px; margin-bottom: 6px; }
+    #admin-box p { color: #8a7a6a; font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+    .pin-dots { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; }
+    .pin-dot { width: 16px; height: 16px; border-radius: 50%; background: #2a2a3a; border: 2px solid #3a3a4a; transition: all 0.15s; }
+    .pin-dot.filled { background: #8B6914; border-color: #D4A017; }
+    .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .pin-btn { padding: 16px; background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 10px; color: #e8e0d4; font-size: 20px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .pin-btn:hover { background: #2a2a3a; border-color: #8B6914; }
+    .pin-btn.del { font-size: 16px; color: #8a7a5a; }
+    #pin-error { color: #c07070; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; }
+    #pin-cancel { width: 100%; padding: 10px; background: transparent; border: 1px solid #2a2a3a; border-radius: 8px; color: #6a6a8a; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .admin-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid; }
+    .admin-status.on  { background: #1e1808; border-color: #8B691444; color: #D4A017; }
+    .admin-status.on:hover { border-color: #8B6914; }
+    .admin-status.off { background: transparent; border-color: #2a2a2a; color: #4a4a5a; }
+    .admin-status.off:hover { color: #8a7a5a; border-color: #3a3a3a; }
+    .change-pin-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2a38; }
+    .change-pin-section h3 { color: #D4A017; font-size: 13px; margin-bottom: 10px; }
+    .change-pin-row { display: flex; gap: 8px; align-items: center; }
+    .change-pin-row input { flex: 1; padding: 7px 10px; background: #0f0f18; border: 1px solid #3a3a4a; border-radius: 6px; color: #D4A017; font-size: 16px; font-family: inherit; text-align: center; outline: none; letter-spacing: 6px; }
+    .change-pin-row input:focus { border-color: #8B6914; }
+    #change-pin-error { color: #c07070; font-size: 12px; margin-top: 6px; min-height: 16px; }
   </style>
 </head>
 <body>
 
 <div id="loading"><div class="spinner">🎱</div><div>Laden…</div></div>
+
+<!-- Admin PIN overlay -->
+<div id="admin-overlay">
+  <div id="admin-box">
+    <h2 id="admin-title">🔐 Beheerder inloggen</h2>
+    <p id="admin-desc">Voer de pincode in om beheerderstoegang te krijgen.</p>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinInput('1')">1</button>
+      <button class="pin-btn" onclick="pinInput('2')">2</button>
+      <button class="pin-btn" onclick="pinInput('3')">3</button>
+      <button class="pin-btn" onclick="pinInput('4')">4</button>
+      <button class="pin-btn" onclick="pinInput('5')">5</button>
+      <button class="pin-btn" onclick="pinInput('6')">6</button>
+      <button class="pin-btn" onclick="pinInput('7')">7</button>
+      <button class="pin-btn" onclick="pinInput('8')">8</button>
+      <button class="pin-btn" onclick="pinInput('9')">9</button>
+      <button class="pin-btn del" onclick="pinInput('del')">&#x232B;</button>
+      <button class="pin-btn" onclick="pinInput('0')">0</button>
+      <button class="pin-btn del" onclick="pinInput('clr')">&#x2715;</button>
+    </div>
+    <div id="pin-error"></div>
+    <button id="pin-cancel" onclick="closeAdminOverlay()">Annuleren</button>
+
+    <!-- Change PIN section (only shown when already admin) -->
+    <div class="change-pin-section" id="change-pin-section" style="display:none">
+      <h3>&#x1F511; Pincode wijzigen</h3>
+      <div class="change-pin-row">
+        <input type="password" id="new-pin-input" maxlength="4" placeholder="••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+        <button class="btn btn-gold" onclick="changePin()">Opslaan</button>
+      </div>
+      <div id="change-pin-error"></div>
+    </div>
+  </div>
+</div>
 
 <div id="setup-screen">
   <h2>🎱 Biljartclub instellen</h2>
@@ -231,12 +293,13 @@
 
 <div id="app">
   <div id="header">
-    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">Biljartclub</div><div class="logo-sub">Wedstrijdplanner</div></div></div>
+    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool</div></div></div>
     <nav>
       <button class="active" onclick="switchView('attendance')">&#x1F4CB; Aanwezig</button>
       <button onclick="switchView('schedule')">&#x1F3C6; Schema</button>
       <button onclick="switchView('standings')">&#x1F4CA; Stand</button>
       <button onclick="switchView('history')">&#x1F4DC; Historie</button>
+      <button class="admin-status off" id="admin-nav-btn" onclick="onAdminNavClick()">&#x1F512; Beheerder</button>
     </nav>
   </div>
   <div id="main">
@@ -248,7 +311,7 @@
         <div class="btn-row">
           <button class="btn btn-gray" onclick="selectAll()">Alles</button>
           <button class="btn btn-gray" onclick="clearAll()">Wissen</button>
-          <button class="btn btn-green" onclick="toggleAddMember()">+ Nieuw lid</button>
+          <button class="btn btn-green admin-only" id="btn-add-member" onclick="toggleAddMember()">+ Nieuw lid</button>
         </div>
       </div>
       <div id="add-member-form">
@@ -296,7 +359,7 @@
         <div class="card-header"><strong>Seizoensklassement</strong></div>
         <div style="overflow-x:auto"><table class="standings-table" id="table-season"></table></div>
       </div>
-      <div class="peut-editor">
+      <div class="peut-editor admin-only">
         <h3>&#x2699;&#xFE0F; Peut per speler</h3>
         <p>Het peut is het aantal te maken caramboles per wedstrijd. Wijzigingen worden direct opgeslagen voor alle clubleden.</p>
         <div class="peut-grid" id="peut-grid"></div>
@@ -305,7 +368,7 @@
 
     <!-- HISTORY -->
     <div id="view-history" class="view">
-      <div class="period-panel">
+      <div class="period-panel admin-only">
         <h3>&#x2699;&#xFE0F; Periode-instellingen</h3>
         <div class="period-row">
           <label>Periodelengte:</label>
@@ -337,6 +400,8 @@
 
   const DEFAULT_MEMBERS = ["Stephan Deen","Bart Kuin","Chris Appelman","Dennis Swart","Fred Groot","Harold Visser","Jargo Grooteman","Jeroen Kuin","Joris Botman","Kees Kolenberg","Klaas Jan Rusting","Marco Bakker","Mark Schuitemaker","Michel van der Sluis","Nico Kok","Peter Schuitemaker","Rimbert Morsch","Rob Kolenberg","Rob Sijm","Rob Stavenuiter","Ron Zwan","Ronald Deen","Ronald Koomen","Siem Kolken","Thomas Grent","Wouter Steltenpool"];
   const MAX_TURNS = 20;
+  const ADMIN_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+  const DEFAULT_PIN = "1234";
 
   let db = null;
   let members = DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 }));
@@ -348,6 +413,127 @@
   let periodWeeks = 7;
   let periodStartDate = null;
   let liveMatch = null;
+
+  // ── Admin state ────────────────────────────────────────────────────────────
+  let adminPin = localStorage.getItem("biljart_pin") || DEFAULT_PIN;
+  let isAdmin = false;
+  let adminExpiry = null;
+  let pinBuffer = "";
+  let pinMode = "login"; // "login" | "change"
+  let adminTimerInterval = null;
+
+  function checkAdminExpiry() {
+    if (isAdmin && adminExpiry && Date.now() > adminExpiry) { logoutAdmin(); }
+  }
+
+  function loginAdmin() {
+    isAdmin = true;
+    adminExpiry = Date.now() + ADMIN_TIMEOUT_MS;
+    localStorage.setItem("biljart_admin_expiry", adminExpiry);
+    adminTimerInterval && clearInterval(adminTimerInterval);
+    adminTimerInterval = setInterval(() => { checkAdminExpiry(); updateAdminUI(); }, 10000);
+    updateAdminUI();
+    renderMembers();
+    renderPeutGrid();
+  }
+
+  function logoutAdmin() {
+    isAdmin = false; adminExpiry = null;
+    localStorage.removeItem("biljart_admin_expiry");
+    adminTimerInterval && clearInterval(adminTimerInterval);
+    updateAdminUI(); renderMembers(); renderPeutGrid();
+  }
+
+  function updateAdminUI() {
+    const btn = document.getElementById("admin-nav-btn");
+    if (isAdmin) {
+      const mins = Math.max(0, Math.round((adminExpiry - Date.now()) / 60000));
+      btn.className = "admin-status on";
+      btn.innerHTML = "&#x1F513; Beheerder (" + mins + "m) &nbsp;<span style='font-size:10px;opacity:0.7'>uitloggen</span>";
+    } else {
+      btn.className = "admin-status off";
+      btn.innerHTML = "&#x1F512; Beheerder";
+    }
+    // Show/hide admin-only elements
+    document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin ? "" : "none");
+    document.querySelectorAll(".admin-only-flex").forEach(el => el.style.display = isAdmin ? "flex" : "none");
+  }
+
+  window.onAdminNavClick = function() {
+    if (isAdmin) { logoutAdmin(); return; }
+    openAdminOverlay("login");
+  };
+
+  function openAdminOverlay(mode) {
+    pinMode = mode; pinBuffer = "";
+    document.getElementById("pin-error").textContent = "";
+    document.getElementById("admin-overlay").classList.add("visible");
+    if (mode === "login") {
+      document.getElementById("admin-title").textContent = "🔐 Beheerder inloggen";
+      document.getElementById("admin-desc").textContent = "Voer de 4-cijferige pincode in.";
+      document.getElementById("change-pin-section").style.display = "none";
+      document.getElementById("pin-cancel").style.display = "block";
+    } else {
+      document.getElementById("admin-title").textContent = "⚙️ Beheerdersinstellingen";
+      document.getElementById("admin-desc").textContent = "Je bent ingelogd als beheerder.";
+      document.getElementById("change-pin-section").style.display = "block";
+      document.getElementById("pin-cancel").style.display = "none";
+      document.getElementById("new-pin-input").value = "";
+      document.getElementById("change-pin-error").textContent = "";
+      // Hide pin pad when already admin — show settings only
+      document.getElementById("pin-dots").style.display = "none";
+      document.querySelector(".pin-pad").style.display = "none";
+    }
+    updatePinDots();
+  }
+
+  window.closeAdminOverlay = function() {
+    document.getElementById("admin-overlay").classList.remove("visible");
+    document.getElementById("pin-dots").style.display = "flex";
+    document.querySelector(".pin-pad").style.display = "grid";
+    pinBuffer = "";
+  };
+
+  window.pinInput = function(val) {
+    if (val === "del") { pinBuffer = pinBuffer.slice(0, -1); }
+    else if (val === "clr") { pinBuffer = ""; }
+    else if (pinBuffer.length < 4) { pinBuffer += val; }
+    updatePinDots();
+    document.getElementById("pin-error").textContent = "";
+    if (pinBuffer.length === 4) {
+      setTimeout(() => {
+        if (pinBuffer === adminPin) {
+          closeAdminOverlay(); loginAdmin();
+        } else {
+          document.getElementById("pin-error").textContent = "Onjuiste pincode, probeer opnieuw.";
+          pinBuffer = ""; updatePinDots();
+        }
+      }, 150);
+    }
+  };
+
+  function updatePinDots() {
+    document.querySelectorAll(".pin-dot").forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
+  }
+
+  window.changePin = function() {
+    const newPin = document.getElementById("new-pin-input").value.trim();
+    const errEl = document.getElementById("change-pin-error");
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { errEl.textContent = "Pincode moet precies 4 cijfers zijn."; return; }
+    adminPin = newPin;
+    localStorage.setItem("biljart_pin", adminPin);
+    errEl.textContent = "";
+    document.getElementById("new-pin-input").value = "";
+    errEl.style.color = "#4a8a4a";
+    errEl.textContent = "✓ Pincode gewijzigd!";
+    setTimeout(() => { errEl.textContent = ""; errEl.style.color = "#c07070"; }, 2000);
+  };
+
+  // Restore admin session if within expiry
+  (function restoreAdmin() {
+    const saved = parseInt(localStorage.getItem("biljart_admin_expiry") || "0");
+    if (saved && Date.now() < saved) { isAdmin = true; adminExpiry = saved; adminTimerInterval = setInterval(() => { checkAdminExpiry(); updateAdminUI(); }, 10000); }
+  })();
 
   function loadConfig() { try { return JSON.parse(localStorage.getItem("biljart_firebase_config")); } catch { return null; } }
 
@@ -379,6 +565,7 @@
     }
     document.getElementById("loading").style.display = "none";
     document.getElementById("app").style.display = "block";
+    updateAdminUI();
     renderMembers(); renderHistory(); renderPeriodPanel(); renderScheduleView(); renderStandings(); renderPeutGrid();
   }
 
@@ -426,9 +613,12 @@
       const btn = document.createElement("button"); btn.className = "member-btn" + (isP ? " present" : "");
       btn.onclick = () => { confirmDelete = null; togglePresent(name); };
       btn.innerHTML = '<div class="member-checkbox"><span class="member-checkbox-tick">&#x2713;</span></div><span class="member-name">' + name + '</span><span class="member-peut">' + (peut||20) + '</span>';
-      const del = document.createElement("button"); del.className = "member-delete" + (isCon ? " confirming" : ""); del.title = isCon ? "Klik nogmaals" : "Verwijder"; del.textContent = isCon ? "✓" : "×";
-      del.onclick = (e) => { e.stopPropagation(); handleDeleteMember(name); };
-      item.appendChild(btn); item.appendChild(del); grid.appendChild(item);
+      if (isAdmin) {
+        const del = document.createElement("button"); del.className = "member-delete" + (isCon ? " confirming" : ""); del.title = isCon ? "Klik nogmaals" : "Verwijder"; del.textContent = isCon ? "✓" : "×";
+        del.onclick = (e) => { e.stopPropagation(); handleDeleteMember(name); };
+        item.appendChild(del);
+      }
+      item.appendChild(btn); grid.appendChild(item);
     });
     if (!filtered.length && query) grid.innerHTML = '<div style="color:#4a4a5a;padding:20px;text-align:center;font-size:14px">Geen leden gevonden</div>';
     document.getElementById("present-count").textContent = present.size;
@@ -450,6 +640,7 @@
   window.handleAddKey = function(e) { if (e.key === "Enter") addMember(); if (e.key === "Escape") toggleAddMember(); };
   window.clearAddError = function() { document.getElementById("add-member-error").textContent = ""; document.getElementById("new-member-input").classList.remove("error"); };
   window.addMember = async function() {
+    if (!isAdmin) return;
     const inp = document.getElementById("new-member-input"); const name = inp.value.trim(); const peut = parseInt(document.getElementById("new-member-peut").value) || 20;
     const err = document.getElementById("add-member-error");
     if (!name) { err.textContent = "Voer een naam in."; inp.classList.add("error"); return; }
@@ -458,6 +649,7 @@
     await persistMembers(); inp.value = ""; document.getElementById("new-member-peut").value = ""; err.textContent = ""; toggleAddMember(); renderMembers(); renderPeutGrid();
   };
   window.handleDeleteMember = async function(name) {
+    if (!isAdmin) return;
     if (confirmDelete === name) { members = members.filter(m => m.name !== name); present.delete(name); confirmDelete = null; schedule = null; document.getElementById("confirm-hint").textContent = ""; await persistMembers(); renderMembers(); }
     else { confirmDelete = name; document.getElementById("confirm-hint").textContent = 'Klik nogmaals op × bij "' + name + '" om te bevestigen.'; renderMembers(); }
   };
@@ -472,6 +664,7 @@
     });
   };
   window.updatePeut = async function(name, val) {
+    if (!isAdmin) return;
     const v = Math.max(1, parseInt(val) || 20);
     members = members.map(m => m.name === name ? { ...m, peut: v } : m);
     await persistMembers(); renderMembers();
@@ -623,8 +816,8 @@
       : "<strong>Lopend venster:</strong> de afgelopen " + periodWeeks + " weken tellen mee.<br>Vanaf " + startStr + " · <strong>" + inPeriod + "</strong> avond" + (inPeriod!==1?"en":"") + " in dit venster.";
   }
   window.onSliderChange = function(v) { document.getElementById("period-weeks-label").textContent = v + " weken"; document.getElementById("period-save-btn").style.display = parseInt(v) !== periodWeeks ? "inline-block" : "none"; };
-  window.savePeriodWeeks = async function() { periodWeeks = parseInt(document.getElementById("period-weeks-slider").value); await persistSettings(); renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); };
-  window.showNewPeriodConfirm = function() { document.getElementById("new-period-confirm").classList.add("visible"); };
+  window.savePeriodWeeks = async function() { if (!isAdmin) return; periodWeeks = parseInt(document.getElementById("period-weeks-slider").value); await persistSettings(); renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); };
+  window.showNewPeriodConfirm = function() { if (!isAdmin) return; document.getElementById("new-period-confirm").classList.add("visible"); };
   window.hideNewPeriodConfirm = function() { document.getElementById("new-period-confirm").classList.remove("visible"); };
   window.startNewPeriod = async function() { periodStartDate = new Date(); await persistSettings(); hideNewPeriodConfirm(); renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); };
 
@@ -637,11 +830,12 @@
     lst.innerHTML = history.map((s, idx) => {
       const d = new Date(s.date); const inp = d >= cutoff; const sc = s.matches.filter(m => m.score).length;
       const ds = d.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-      return '<div class="history-session' + (inp?"":" old") + '"><div class="history-header"><div><span class="history-date">' + ds + '</span>' + (inp ? '<span class="history-period-tag">huidige periode</span>' : "") + '</div><div class="history-meta"><span>' + (s.players?.length||"?") + ' spl. · ' + s.matches.length + ' wedstr.' + (sc ? ' · ' + sc + ' gescoord' : "") + '</span><button class="btn-delete-session" onclick="deleteSession(' + idx + ')">✕</button></div></div>' +
+      const delBtn = isAdmin ? '<button class="btn-delete-session" onclick="deleteSession(' + idx + ')">✕</button>' : "";
+      return '<div class="history-session' + (inp?"":" old") + '"><div class="history-header"><div><span class="history-date">' + ds + '</span>' + (inp ? '<span class="history-period-tag">huidige periode</span>' : "") + '</div><div class="history-meta"><span>' + (s.players?.length||"?") + ' spl. · ' + s.matches.length + ' wedstr.' + (sc ? ' · ' + sc + ' gescoord' : "") + '</span>' + delBtn + '</div></div>' +
         '<div class="history-body">' + s.matches.map(m => '<span class="history-match' + (m.score?" has-score":"") + '">' + m.p1 + ' vs ' + m.p2 + (m.score ? ' (' + m.score.p1c + '–' + m.score.p2c + ')' : "") + '</span>').join("") + '</div></div>';
     }).join("");
   };
-  window.deleteSession = async function(idx) { history = history.filter((_, i) => i !== idx); await persistHistory(); renderHistory(); renderStandings(); };
+  window.deleteSession = async function(idx) { if (!isAdmin) return; history = history.filter((_, i) => i !== idx); await persistHistory(); renderHistory(); renderStandings(); };
 
   init();
 </script>
