@@ -67,8 +67,6 @@
     #add-member-error { color: #c07070; font-size: 12px; width: 100%; min-height: 16px; }
     .btn-add { padding: 7px 16px; background: #3a6a3a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
     input.text-input { width: 100%; padding: 9px 14px; background: #1a1a22; border: 1px solid #2a2a38; color: #e8e0d4; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 14px; }
-    .schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 600px) { .schedule-grid { grid-template-columns: 1fr; } }
     .schedule-col { background: #16161e; border: 1px solid #2a2a38; border-radius: 12px; overflow: hidden; }
     .schedule-col-header { background: linear-gradient(135deg, #1a1208, #1e1810); padding: 10px 16px; border-bottom: 1px solid #2a2218; display: flex; align-items: center; gap: 8px; }
     .schedule-col-header strong { color: #D4A017; }
@@ -240,6 +238,7 @@
         <button class="btn btn-gold" onclick="changePin()">Opslaan</button>
       </div>
       <div id="change-pin-error"></div>
+      <button onclick="logoutAdminFromPanel()" style="margin-top:14px;width:100%;padding:10px;background:transparent;border:1px solid #5a2a2a;border-radius:8px;color:#c07070;font-size:14px;font-family:inherit;cursor:pointer;">Uitloggen als beheerder</button>
     </div>
   </div>
 </div>
@@ -460,34 +459,46 @@
   }
 
   window.onAdminNavClick = function() {
-    if (isAdmin) { logoutAdmin(); return; }
-    openAdminOverlay("login");
+    if (isAdmin) {
+      // Already logged in: show settings panel with change-pin option
+      openAdminOverlay("settings");
+    } else {
+      openAdminOverlay("login");
+    }
   };
 
   function openAdminOverlay(mode) {
     pinMode = mode; pinBuffer = "";
     document.getElementById("pin-error").textContent = "";
     document.getElementById("admin-overlay").classList.add("visible");
+    document.getElementById("pin-dots").style.display = "flex";
+    document.querySelector(".pin-pad").style.display = "grid";
+
     if (mode === "login") {
       document.getElementById("admin-title").textContent = "🔐 Beheerder inloggen";
       document.getElementById("admin-desc").textContent = "Voer de 4-cijferige pincode in.";
       document.getElementById("change-pin-section").style.display = "none";
       document.getElementById("pin-cancel").style.display = "block";
+      document.getElementById("pin-cancel").textContent = "Annuleren";
+      document.getElementById("pin-cancel").onclick = closeAdminOverlay;
     } else {
+      // "settings" mode: already logged in
       document.getElementById("admin-title").textContent = "⚙️ Beheerdersinstellingen";
-      document.getElementById("admin-desc").textContent = "Je bent ingelogd als beheerder.";
+      document.getElementById("admin-desc").textContent = "Voer een nieuwe 4-cijferige pincode in en klik Opslaan.";
       document.getElementById("change-pin-section").style.display = "block";
-      document.getElementById("pin-cancel").style.display = "none";
       document.getElementById("new-pin-input").value = "";
       document.getElementById("change-pin-error").textContent = "";
-      // Hide pin pad when already admin — show settings only
+      // Hide numpad — not needed in settings mode
       document.getElementById("pin-dots").style.display = "none";
       document.querySelector(".pin-pad").style.display = "none";
+      document.getElementById("pin-cancel").style.display = "block";
+      document.getElementById("pin-cancel").textContent = "Sluiten";
+      document.getElementById("pin-cancel").onclick = closeAdminOverlay;
     }
     updatePinDots();
   }
 
-  window.closeAdminOverlay = function() {
+  window.logoutAdminFromPanel = function() { closeAdminOverlay(); logoutAdmin(); };
     document.getElementById("admin-overlay").classList.remove("visible");
     document.getElementById("pin-dots").style.display = "flex";
     document.querySelector(".pin-pad").style.display = "grid";
@@ -591,8 +602,7 @@
     for (const s of history) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); all[k] = (all[k] || 0) + 1; if (new Date(s.date) >= cutoff) recent.add(k); } }
     const n = arr.length; let best = null, bestScore = Infinity;
     for (let a = 0; a < 600; a++) { const c = shuffle(arr); const ms = []; let sc = 0; for (let i = 0; i < n; i++) { const p1 = c[i], p2 = c[(i+1)%n]; const k = matchKey(p1,p2); ms.push({p1,p2}); if (recent.has(k)) sc+=10; sc+=(all[k]||0); } if (sc < bestScore) { bestScore = sc; best = ms; } }
-    const half = Math.ceil(n / 2);
-    return { matches: best, wedstrijd1: best.slice(0, half), wedstrijd2: best.slice(half) };
+    return { matches: best };
   }
 
   window.switchView = function(view) {
@@ -686,19 +696,16 @@
     document.getElementById("schedule-badges").innerHTML = '<span class="badge badge-green">' + present.size + ' spelers</span><span class="badge badge-blue">' + schedule.matches.length + ' wedstrijden</span>' + (cf > 0 ? '<span class="badge badge-red">&#x26A0; ' + cf + ' herhal' + (cf===1?"ing":"ingen") + ' in periode</span>' : '<span class="badge badge-green">&#x2713; Geen herhalingen</span>');
     const sb = document.getElementById("save-btn"); sb.textContent = saved ? "✓ Opgeslagen" : "💾 Bevestig & Sla Op"; sb.className = "btn-save" + (saved ? " saved" : ""); sb.disabled = saved;
     const grid = document.getElementById("schedule-grid"); grid.innerHTML = "";
-    [{ label: "Wedstrijd 1", matches: schedule.wedstrijd1 }, { label: "Wedstrijd 2", matches: schedule.wedstrijd2 }].forEach(({ label, matches }) => {
-      const base = label === "Wedstrijd 1" ? 0 : schedule.wedstrijd1.length;
-      const col = document.createElement("div"); col.className = "schedule-col";
-      col.innerHTML = '<div class="schedule-col-header"><strong>' + label + '</strong><span>' + matches.length + ' duels</span></div><div class="schedule-col-body">' +
-        matches.map((m, i) => {
-          const gi = base + i; const rep = pc[matchKey(m.p1, m.p2)] > 0; const sc = saved && history[0]?.matches[gi]?.score;
-          const badge = sc ? '<span class="match-score-badge">' + sc.p1c + '/' + getPeut(m.p1) + ' · ' + sc.p2c + '/' + getPeut(m.p2) + '</span>' : (saved ? '<span style="font-size:11px;color:#6a6a8a">▶ score invoeren</span>' : "");
-          return '<div class="match-card' + (rep?" repeat":"") + (sc?" scored":"") + '" onclick="' + (saved ? 'openLiveMatch(0,' + gi + ')' : '') + '">' +
-            '<div class="match-num">' + (i+1) + '.</div><div class="match-players"><div class="match-p">' + m.p1 + '</div><div class="match-vs">vs</div><div class="match-p">' + m.p2 + '</div></div>' +
-            (rep && !sc ? '<div class="match-warn">&#x26A0;</div>' : '') + badge + '</div>';
-        }).join("") + '</div>';
-      grid.appendChild(col);
-    });
+    const col = document.createElement("div"); col.className = "schedule-col";
+    col.innerHTML = '<div class="schedule-col-header"><strong>Wedstrijden</strong><span>' + schedule.matches.length + ' duels · iedereen speelt 2×</span></div><div class="schedule-col-body">' +
+      schedule.matches.map((m, i) => {
+        const rep = pc[matchKey(m.p1, m.p2)] > 0; const sc = saved && history[0]?.matches[i]?.score;
+        const badge = sc ? '<span class="match-score-badge">' + sc.p1c + '/' + getPeut(m.p1) + ' · ' + sc.p2c + '/' + getPeut(m.p2) + '</span>' : (saved ? '<span style="font-size:11px;color:#6a6a8a">▶ score invoeren</span>' : "");
+        return '<div class="match-card' + (rep?" repeat":"") + (sc?" scored":"") + '" onclick="' + (saved ? 'openLiveMatch(0,' + i + ')' : '') + '">' +
+          '<div class="match-num">' + (i+1) + '.</div><div class="match-players"><div class="match-p">' + m.p1 + '</div><div class="match-vs">vs</div><div class="match-p">' + m.p2 + '</div></div>' +
+          (rep && !sc ? '<div class="match-warn">&#x26A0;</div>' : '') + badge + '</div>';
+      }).join("") + '</div>';
+    grid.appendChild(col);
   }
 
   window.openLiveMatch = function(sIdx, mIdx) {
@@ -784,17 +791,34 @@
 
   function computeStandings(sessions) {
     const stats = {};
-    const init = (n) => { if (!stats[n]) stats[n] = { name: n, games: 0, wins: 0, pts: 0, car: 0, turns: 0 }; };
-    for (const s of sessions) { for (const m of s.matches) { if (!m.score) continue; init(m.p1); init(m.p2); stats[m.p1].games++; stats[m.p2].games++; stats[m.p1].pts += m.score.p1pts; stats[m.p2].pts += m.score.p2pts; stats[m.p1].car += m.score.p1c; stats[m.p2].car += m.score.p2c; stats[m.p1].turns += m.score.turns.length; stats[m.p2].turns += m.score.turns.length; if (m.score.p1pts > m.score.p2pts) stats[m.p1].wins++; else if (m.score.p2pts > m.score.p1pts) stats[m.p2].wins++; } }
+    const init = (n) => { if (!stats[n]) stats[n] = { name: n, games: 0, wins: 0, pts: 0, car: 0, turns: 0, topSerie: 0 }; };
+    for (const s of sessions) {
+      for (const m of s.matches) {
+        if (!m.score) continue;
+        init(m.p1); init(m.p2);
+        stats[m.p1].games++; stats[m.p2].games++;
+        stats[m.p1].pts += m.score.p1pts; stats[m.p2].pts += m.score.p2pts;
+        stats[m.p1].car += m.score.p1c; stats[m.p2].car += m.score.p2c;
+        stats[m.p1].turns += m.score.turns.length; stats[m.p2].turns += m.score.turns.length;
+        if (m.score.p1pts > m.score.p2pts) stats[m.p1].wins++; else if (m.score.p2pts > m.score.p1pts) stats[m.p2].wins++;
+        // Highest single-turn series
+        if (m.score.turns && m.score.turns.length) {
+          const best1 = Math.max(...m.score.turns.map(t => t.c1));
+          const best2 = Math.max(...m.score.turns.map(t => t.c2));
+          if (best1 > stats[m.p1].topSerie) stats[m.p1].topSerie = best1;
+          if (best2 > stats[m.p2].topSerie) stats[m.p2].topSerie = best2;
+        }
+      }
+    }
     return Object.values(stats).sort((a, b) => b.pts - a.pts || b.wins - a.wins);
   }
 
   function renderStandingsTable(id, rows) {
     const t = document.getElementById(id);
-    if (!rows.length) { t.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#4a4a5a;padding:30px">Nog geen gescoorde wedstrijden</td></tr>'; return; }
+    if (!rows.length) { t.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#4a4a5a;padding:30px">Nog geen gescoorde wedstrijden</td></tr>'; return; }
     const medals = ["🥇","🥈","🥉"];
-    t.innerHTML = '<thead><tr><th>#</th><th>Speler</th><th class="num">Punten</th><th class="num">Wedstr.</th><th class="num">Caramboles</th><th class="num">Gem./beurt</th></tr></thead><tbody>' +
-      rows.map((r, i) => '<tr><td>' + (medals[i] || (i+1)) + '</td><td>' + r.name + '</td><td class="pts">' + r.pts + '</td><td class="num">' + r.games + '</td><td class="num">' + r.car + '</td><td class="num">' + (r.turns > 0 ? (r.car/r.turns).toFixed(2) : "–") + '</td></tr>').join("") + '</tbody>';
+    t.innerHTML = '<thead><tr><th>#</th><th>Speler</th><th class="num">Punten</th><th class="num">Wedstr.</th><th class="num">Caramboles</th><th class="num">Gem./beurt</th><th class="num">Hoogste serie</th></tr></thead><tbody>' +
+      rows.map((r, i) => '<tr><td>' + (medals[i] || (i+1)) + '</td><td>' + r.name + '</td><td class="pts">' + r.pts + '</td><td class="num">' + r.games + '</td><td class="num">' + r.car + '</td><td class="num">' + (r.turns > 0 ? (r.car/r.turns).toFixed(2) : "–") + '</td><td class="num" style="color:#D4A017;font-weight:bold">' + (r.topSerie || "–") + '</td></tr>').join("") + '</tbody>';
   }
 
   window.renderStandings = function() {
