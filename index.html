@@ -499,6 +499,8 @@
   }
 
   window.logoutAdminFromPanel = function() { closeAdminOverlay(); logoutAdmin(); };
+
+  window.closeAdminOverlay = function() {
     document.getElementById("admin-overlay").classList.remove("visible");
     document.getElementById("pin-dots").style.display = "flex";
     document.querySelector(".pin-pad").style.display = "grid";
