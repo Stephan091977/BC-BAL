@@ -46,7 +46,7 @@
     button.btn-save.saved { background: #1a2e14; color: #4a8a4a; border-color: #3a5a3a; cursor: default; }
     #member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
     .member-item { position: relative; }
-    .member-btn { width: 100%; padding: 10px 36px 10px 14px; background: #16161e; border: 1px solid #2a2a38; border-radius: 8px; color: #8a7a6a; cursor: pointer; text-align: left; font-size: 14px; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+    .member-btn { width: 100%; padding: 10px 100px 10px 14px; background: #16161e; border: 1px solid #2a2a38; border-radius: 8px; color: #8a7a6a; cursor: pointer; text-align: left; font-size: 14px; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
     .member-btn.present { background: linear-gradient(135deg, #1a2e14, #223a1a); border-color: #4a7a3a; color: #7ec87e; }
     .member-checkbox { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; border: 2px solid #3a3a4a; background: transparent; display: flex; align-items: center; justify-content: center; }
     .member-btn.present .member-checkbox { border-color: #4a7a3a; background: #4a7a3a; }
@@ -54,6 +54,10 @@
     .member-btn.present .member-checkbox-tick { display: block; }
     .member-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .member-peut { font-size: 11px; color: #8B6914; background: #1e1808; padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+    .w-selector { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; }
+    .w-btn { padding: 3px 7px; font-size: 11px; font-family: inherit; border-radius: 4px; cursor: pointer; background: #1a1a26; border: 1px solid #2a2a3a; color: #6a6a8a; transition: all 0.15s; }
+    .w-btn:hover { border-color: #8B6914; color: #D4A017; }
+    .w-btn.active { background: #2a1e08; border-color: #8B6914; color: #D4A017; font-weight: bold; }
     .member-delete { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #4a3a3a; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0; }
     .member-delete.confirming { background: #5a2020; border: 1px solid #8a4a4a; color: #e07070; }
     #generate-btn { display: block; margin: 24px auto 0; padding: 12px 40px; background: linear-gradient(135deg, #8B6914, #b8850a); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-family: inherit; cursor: pointer; font-weight: bold; box-shadow: 0 4px 16px rgba(139,105,20,0.4); }
@@ -174,6 +178,10 @@
     .btn-delete-session { background: transparent; border: 1px solid #3a2a2a; color: #6a4a4a; padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: inherit; }
     .empty-state { text-align: center; padding: 60px; color: #4a4a5a; }
     .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .avond-type-btn { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: inherit; border: 1px solid #2a2218; background: #1a1a22; color: #6a6a8a; transition: all 0.15s; }
+    .avond-type-btn.active { background: #1e1808; border-color: #8B6914; color: #D4A017; font-weight: bold; }
+    .avond-type-btn.sf-active { background: #1a1008; border-color: #D4A017; color: #D4A017; font-weight: bold; box-shadow: 0 0 12px rgba(212,160,23,0.3); }
+    .sf-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #1e1808; border: 1px solid #D4A01744; border-radius: 6px; color: #D4A017; font-size: 11px; }
     #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; align-items: center; justify-content: center; }
     #admin-overlay.visible { display: flex; }
     #admin-box { background: #16161e; border: 1px solid #8B6914; border-radius: 16px; max-width: 360px; width: 100%; padding: 28px; }
@@ -297,6 +305,7 @@
       <button class="active" onclick="switchView('attendance')">&#x1F4CB; Aanwezig</button>
       <button onclick="switchView('schedule')">&#x1F3C6; Schema</button>
       <button onclick="switchView('standings')">&#x1F4CA; Stand</button>
+      <button onclick="switchView('superfriday')">&#x2728; Super Friday</button>
       <button onclick="switchView('history')">&#x1F4DC; Historie</button>
       <button class="admin-status off" id="admin-nav-btn" onclick="onAdminNavClick()">&#x1F512; Beheerder</button>
     </nav>
@@ -325,7 +334,34 @@
       <input class="text-input" id="search-input" placeholder="Zoek lid&#x2026;" oninput="renderMembers()" />
       <div id="member-grid"></div>
       <div id="confirm-hint"></div>
+      <div id="present-warning" style="display:none;margin-top:16px;padding:12px 16px;background:#2a1a0a;border:1px solid #8a6a3a;border-radius:8px;color:#c8a060;font-size:14px;text-align:center;">
+        ⚠ Het totaal aantal wedstrijden is oneven. Pas het aantal wedstrijden van één speler aan zodat het totaal even wordt.
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;">
+        <button class="avond-type-btn active" id="btn-type-regular" onclick="setAvondType('regular')">&#x1F3B1; Reguliere avond</button>
+        <button class="avond-type-btn" id="btn-type-superfriday" onclick="setAvondType('superfriday')">&#x2728; Super Friday!</button>
+      </div>
       <button id="generate-btn" onclick="generateSchedule()" disabled>&#x1F3B1; Genereer Schema</button>
+    </div>
+
+    <!-- SUPER FRIDAY -->
+    <div id="view-superfriday" class="view">
+      <div style="background:linear-gradient(135deg,#1a1008,#1e1208);border:1px solid #8B6914;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:32px">✨</div>
+        <div>
+          <div style="color:#D4A017;font-size:18px;font-weight:bold;letter-spacing:1px;">Super Friday!</div>
+          <div style="color:#8a7a5a;font-size:13px;margin-top:2px;">Seizoensklassement — alle Super Friday avonden</div>
+        </div>
+      </div>
+      <div id="sf-empty" class="empty-state" style="display:none"><div class="icon">✨</div><div>Nog geen Super Friday avonden gespeeld</div></div>
+      <div class="card" id="sf-standings-card" style="display:none">
+        <div class="card-header"><strong>&#x1F3C6; Seizoensstand Super Friday</strong></div>
+        <div style="overflow-x:auto"><table class="standings-table" id="table-superfriday"></table></div>
+      </div>
+      <div style="margin-top:20px;" id="sf-history-section">
+        <div style="color:#8a7a5a;font-size:14px;margin-bottom:12px;" id="sf-history-count"></div>
+        <div id="sf-history-list"></div>
+      </div>
     </div>
 
     <!-- SCHEDULE -->
@@ -405,7 +441,10 @@
   let db = null;
   let members = DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 }));
   let history = [];
+  let sfHistory = [];   // Super Friday sessies
+  let avondType = "regular"; // "regular" | "superfriday"
   let present = new Set();
+  let wedstrijden = {};  // name -> 1, 2 or 3
   let schedule = null;
   let saved = false;
   let confirmDelete = null;
@@ -563,27 +602,31 @@
     if (!cfg) { document.getElementById("loading").style.display = "none"; document.getElementById("setup-screen").style.display = "block"; return; }
     try {
       const app = initializeApp(cfg); db = getFirestore(app);
-      const [mSnap, hSnap, sSnap] = await Promise.all([getDoc(doc(db, "biljart", "members")), getDoc(doc(db, "biljart", "history")), getDoc(doc(db, "biljart", "settings"))]);
+      const [mSnap, hSnap, sSnap, sfSnap] = await Promise.all([getDoc(doc(db, "biljart", "members")), getDoc(doc(db, "biljart", "history")), getDoc(doc(db, "biljart", "settings")), getDoc(doc(db, "biljart", "sfhistory"))]);
       if (mSnap.exists()) members = mSnap.data().list;
       if (hSnap.exists()) history = hSnap.data().list;
       if (sSnap.exists()) { const s = sSnap.data(); periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; }
+      if (sfSnap.exists()) sfHistory = sfSnap.data().list;
       onSnapshot(doc(db, "biljart", "members"), snap => { if (snap.exists()) { members = snap.data().list; renderMembers(); renderPeutGrid(); renderStandings(); } });
       onSnapshot(doc(db, "biljart", "history"), snap => { if (snap.exists()) { history = snap.data().list; renderHistory(); renderScheduleView(); renderStandings(); } });
       onSnapshot(doc(db, "biljart", "settings"), snap => { if (snap.exists()) { const s = snap.data(); periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); } });
+      onSnapshot(doc(db, "biljart", "sfhistory"), snap => { if (snap.exists()) { sfHistory = snap.data().list; renderSuperFriday(); } });
     } catch(e) {
       console.warn("Firebase niet beschikbaar:", e);
       try { members = JSON.parse(localStorage.getItem("biljart_members")) || DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 })); } catch{}
       try { history = JSON.parse(localStorage.getItem("biljart_history")) || []; } catch{}
       try { const s = JSON.parse(localStorage.getItem("biljart_settings")); if (s) { periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; } } catch{}
+      try { sfHistory = JSON.parse(localStorage.getItem("biljart_sfhistory")) || []; } catch{}
     }
     document.getElementById("loading").style.display = "none";
     document.getElementById("app").style.display = "block";
     updateAdminUI();
-    renderMembers(); renderHistory(); renderPeriodPanel(); renderScheduleView(); renderStandings(); renderPeutGrid();
+    renderMembers(); renderHistory(); renderPeriodPanel(); renderScheduleView(); renderStandings(); renderPeutGrid(); renderSuperFriday();
   }
 
   async function persistMembers() { if (db) await setDoc(doc(db, "biljart", "members"), { list: members }); localStorage.setItem("biljart_members", JSON.stringify(members)); }
   async function persistHistory() { if (db) await setDoc(doc(db, "biljart", "history"), { list: history }); localStorage.setItem("biljart_history", JSON.stringify(history)); }
+  async function persistSfHistory() { if (db) await setDoc(doc(db, "biljart", "sfhistory"), { list: sfHistory }); localStorage.setItem("biljart_sfhistory", JSON.stringify(sfHistory)); }
   async function persistSettings() { const s = { periodWeeks, periodStart: periodStartDate ? periodStartDate.toISOString() : null }; if (db) await setDoc(doc(db, "biljart", "settings"), s); localStorage.setItem("biljart_settings", JSON.stringify(s)); }
 
   function matchKey(a, b) { return [a, b].sort().join("|||"); }
@@ -602,17 +645,54 @@
   function buildSchedule(arr) {
     const cutoff = getCutoff(); const recent = new Set(); const all = {};
     for (const s of history) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); all[k] = (all[k] || 0) + 1; if (new Date(s.date) >= cutoff) recent.add(k); } }
-    const n = arr.length; let best = null, bestScore = Infinity;
-    for (let a = 0; a < 600; a++) { const c = shuffle(arr); const ms = []; let sc = 0; for (let i = 0; i < n; i++) { const p1 = c[i], p2 = c[(i+1)%n]; const k = matchKey(p1,p2); ms.push({p1,p2}); if (recent.has(k)) sc+=10; sc+=(all[k]||0); } if (sc < bestScore) { bestScore = sc; best = ms; } }
+
+    // Build a "slots" array: each player appears as many times as their wedstrijden count
+    const slots = [];
+    arr.forEach(name => { const w = wedstrijden[name] || 2; for (let i = 0; i < w; i++) slots.push(name); });
+
+    // Generate pairings by shuffling slots and pairing consecutive entries,
+    // ensuring no player plays themselves
+    let best = null, bestScore = Infinity;
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      const s = shuffle(slots);
+      // Check no self-pairings
+      let valid = true;
+      const ms = [];
+      for (let i = 0; i < s.length; i += 2) {
+        if (s[i] === s[i+1]) { valid = false; break; }
+        ms.push({ p1: s[i], p2: s[i+1] });
+      }
+      if (!valid) continue;
+      // Score: penalise recent pairs and all-time repeats
+      let sc = 0;
+      ms.forEach(m => { const k = matchKey(m.p1, m.p2); if (recent.has(k)) sc += 10; sc += (all[k] || 0); });
+      if (sc < bestScore) { bestScore = sc; best = ms; }
+    }
+    // Fallback if no valid pairing found (very rare): just pair sequentially avoiding self
+    if (!best) {
+      const s = [...slots].sort();
+      const ms = [];
+      for (let i = 0; i < s.length; i += 2) ms.push({ p1: s[i], p2: s[i+1] || s[0] });
+      best = ms;
+    }
     return { matches: best };
   }
+
+  window.setAvondType = function(type) {
+    avondType = type;
+    document.getElementById("btn-type-regular").className = "avond-type-btn" + (type === "regular" ? " active" : "");
+    document.getElementById("btn-type-superfriday").className = "avond-type-btn" + (type === "superfriday" ? " sf-active" : "");
+    const btn = document.getElementById("generate-btn");
+    btn.textContent = type === "superfriday" ? "✨ Genereer Super Friday Schema" : "🎱 Genereer Schema";
+  };
 
   window.switchView = function(view) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById("view-" + view).classList.add("active");
-    document.querySelectorAll("nav button").forEach((b, i) => b.classList.toggle("active", ["attendance","schedule","standings","history"][i] === view));
+    document.querySelectorAll("nav button").forEach((b, i) => b.classList.toggle("active", ["attendance","schedule","standings","superfriday","history"][i] === view));
     if (view === "standings") { renderStandings(); renderPeutGrid(); }
     if (view === "history") renderHistory();
+    if (view === "superfriday") renderSuperFriday();
   };
 
   window.renderMembers = function() {
@@ -621,10 +701,24 @@
     const grid = document.getElementById("member-grid"); grid.innerHTML = "";
     filtered.forEach(({ name, peut }) => {
       const isP = present.has(name); const isCon = confirmDelete === name;
+      const w = wedstrijden[name] || 2;
       const item = document.createElement("div"); item.className = "member-item";
+
       const btn = document.createElement("button"); btn.className = "member-btn" + (isP ? " present" : "");
       btn.onclick = () => { confirmDelete = null; togglePresent(name); };
       btn.innerHTML = '<div class="member-checkbox"><span class="member-checkbox-tick">&#x2713;</span></div><span class="member-name">' + name + '</span><span class="member-peut">' + (peut||20) + '</span>';
+
+      if (isP) {
+        const wsel = document.createElement("div"); wsel.className = "w-selector";
+        [1,2,3].forEach(n => {
+          const wb = document.createElement("button"); wb.className = "w-btn" + (w === n ? " active" : "");
+          wb.textContent = n + "×";
+          wb.onclick = (e) => { e.stopPropagation(); setWedstrijden(name, n); };
+          wsel.appendChild(wb);
+        });
+        item.appendChild(wsel);
+      }
+
       if (isAdmin) {
         const del = document.createElement("button"); del.className = "member-delete" + (isCon ? " confirming" : ""); del.title = isCon ? "Klik nogmaals" : "Verwijder"; del.textContent = isCon ? "✓" : "×";
         del.onclick = (e) => { e.stopPropagation(); handleDeleteMember(name); };
@@ -633,16 +727,47 @@
       item.appendChild(btn); grid.appendChild(item);
     });
     if (!filtered.length && query) grid.innerHTML = '<div style="color:#4a4a5a;padding:20px;text-align:center;font-size:14px">Geen leden gevonden</div>';
+
+    // Totalen berekenen
+    const totalWedstrijden = [...present].reduce((s, n) => s + (wedstrijden[n] || 2), 0);
+    const isEven = totalWedstrijden % 2 === 0;
+    const aantalWedstrijden = totalWedstrijden / 2;
+
     document.getElementById("present-count").textContent = present.size;
     document.getElementById("present-total").textContent = " / " + members.length + " aanwezig";
+
     const b = document.getElementById("present-badge");
-    if (present.size >= 2) { b.style.display = "inline-flex"; b.textContent = present.size + " wedstrijden · iedereen 2×"; } else b.style.display = "none";
-    document.getElementById("generate-btn").disabled = present.size < 2;
+    const warn = document.getElementById("present-warning");
+    if (present.size >= 2) {
+      b.style.display = "inline-flex";
+      if (isEven) {
+        b.className = "badge badge-green";
+        b.textContent = present.size + " spelers · " + aantalWedstrijden + " wedstrijden";
+        warn.style.display = "none";
+      } else {
+        b.className = "badge badge-orange";
+        b.textContent = present.size + " spelers · totaal " + totalWedstrijden + " (oneven!)";
+        warn.style.display = "block";
+      }
+    } else {
+      b.style.display = "none";
+      warn.style.display = "none";
+    }
+    document.getElementById("generate-btn").disabled = present.size < 2 || !isEven;
   };
 
-  window.togglePresent = function(n) { present.has(n) ? present.delete(n) : present.add(n); schedule = null; saved = false; renderMembers(); };
-  window.selectAll = function() { present = new Set(members.map(m => m.name)); schedule = null; saved = false; renderMembers(); };
-  window.clearAll = function() { present = new Set(); schedule = null; saved = false; renderMembers(); };
+  window.togglePresent = function(n) {
+    if (present.has(n)) { present.delete(n); delete wedstrijden[n]; }
+    else { present.add(n); wedstrijden[n] = 2; }
+    schedule = null; saved = false; renderMembers();
+  };
+  window.selectAll = function() {
+    present = new Set(members.map(m => m.name));
+    members.forEach(m => { if (!wedstrijden[m.name]) wedstrijden[m.name] = 2; });
+    schedule = null; saved = false; renderMembers();
+  };
+  window.clearAll = function() { present = new Set(); wedstrijden = {}; schedule = null; saved = false; renderMembers(); };
+  window.setWedstrijden = function(name, n) { wedstrijden[name] = n; schedule = null; saved = false; renderMembers(); };
 
   window.toggleAddMember = function() {
     const f = document.getElementById("add-member-form"); f.classList.toggle("visible");
@@ -686,8 +811,15 @@
   window.regenerate = function() { schedule = buildSchedule([...present]); saved = false; renderScheduleView(); };
   window.confirmSchedule = async function() {
     if (!schedule || saved) return;
-    history = [{ date: new Date().toISOString(), players: [...present], matches: schedule.matches.map(({ p1, p2 }) => ({ p1, p2 })) }, ...history];
-    await persistHistory(); saved = true; renderScheduleView();
+    const session = { date: new Date().toISOString(), players: [...present], matches: schedule.matches.map(({ p1, p2 }) => ({ p1, p2 })), type: avondType };
+    if (avondType === "superfriday") {
+      sfHistory = [session, ...sfHistory];
+      await persistSfHistory();
+    } else {
+      history = [session, ...history];
+      await persistHistory();
+    }
+    saved = true; renderScheduleView();
   };
 
   function renderScheduleView() {
@@ -701,20 +833,24 @@
     const col = document.createElement("div"); col.className = "schedule-col";
     col.innerHTML = '<div class="schedule-col-header"><strong>Wedstrijden</strong><span>' + schedule.matches.length + ' duels · iedereen speelt 2×</span></div><div class="schedule-col-body">' +
       schedule.matches.map((m, i) => {
-        const rep = pc[matchKey(m.p1, m.p2)] > 0; const sc = saved && history[0]?.matches[i]?.score;
+        const rep = pc[matchKey(m.p1, m.p2)] > 0;
+        const isSf = avondType === "superfriday";
+        const savedSession = isSf ? sfHistory[0] : history[0];
+        const sc = saved && savedSession?.matches[i]?.score;
         const badge = sc ? '<span class="match-score-badge">' + sc.p1c + '/' + getPeut(m.p1) + ' · ' + sc.p2c + '/' + getPeut(m.p2) + '</span>' : (saved ? '<span style="font-size:11px;color:#6a6a8a">▶ score invoeren</span>' : "");
-        return '<div class="match-card' + (rep?" repeat":"") + (sc?" scored":"") + '" onclick="' + (saved ? 'openLiveMatch(0,' + i + ')' : '') + '">' +
+        return '<div class="match-card' + (rep?" repeat":"") + (sc?" scored":"") + '" onclick="' + (saved ? 'openLiveMatch(0,' + i + ',' + isSf + ')' : '') + '">' +
           '<div class="match-num">' + (i+1) + '.</div><div class="match-players"><div class="match-p">' + m.p1 + '</div><div class="match-vs">vs</div><div class="match-p">' + m.p2 + '</div></div>' +
           (rep && !sc ? '<div class="match-warn">&#x26A0;</div>' : '') + badge + '</div>';
       }).join("") + '</div>';
     grid.appendChild(col);
   }
 
-  window.openLiveMatch = function(sIdx, mIdx) {
-    const session = history[sIdx]; if (!session) return;
+  window.openLiveMatch = function(sIdx, mIdx, isSf) {
+    const h = isSf ? sfHistory : history;
+    const session = h[sIdx]; if (!session) return;
     const match = session.matches[mIdx]; if (!match) return;
     const ex = match.score;
-    liveMatch = { sIdx, mIdx, p1: match.p1, p2: match.p2, peut1: getPeut(match.p1), peut2: getPeut(match.p2), turns: ex ? (ex.turns || []) : [], done: false };
+    liveMatch = { sIdx, mIdx, isSf: !!isSf, p1: match.p1, p2: match.p2, peut1: getPeut(match.p1), peut2: getPeut(match.p2), turns: ex ? (ex.turns || []) : [], done: false };
     liveMatch.total1 = liveMatch.turns.reduce((s, t) => s + t.c1, 0);
     liveMatch.total2 = liveMatch.turns.reduce((s, t) => s + t.c2, 0);
     const t = liveMatch.turns.length;
@@ -777,10 +913,12 @@
   };
   window.saveMatchResult = async function() {
     if (!liveMatch) return;
-    const { sIdx, mIdx, p1, p2, peut1, peut2, turns, total1, total2 } = liveMatch;
+    const { sIdx, mIdx, isSf, p1, p2, peut1, peut2, turns, total1, total2 } = liveMatch;
     const t = turns.length; const pts1 = calcPoints(total1,peut1); const pts2 = calcPoints(total2,peut2);
-    history[sIdx].matches[mIdx].score = { p1c: total1, p2c: total2, turns, p1pts: pts1, p2pts: pts2, p1avg: t>0 ? parseFloat((total1/t).toFixed(3)) : 0, p2avg: t>0 ? parseFloat((total2/t).toFixed(3)) : 0, peut1, peut2 };
-    await persistHistory(); renderScheduleView(); renderStandings(); closeLiveMatch();
+    const scoreData = { p1c: total1, p2c: total2, turns, p1pts: pts1, p2pts: pts2, p1avg: t>0 ? parseFloat((total1/t).toFixed(3)) : 0, p2avg: t>0 ? parseFloat((total2/t).toFixed(3)) : 0, peut1, peut2 };
+    if (isSf) { sfHistory[sIdx].matches[mIdx].score = scoreData; await persistSfHistory(); renderSuperFriday(); }
+    else { history[sIdx].matches[mIdx].score = scoreData; await persistHistory(); renderScheduleView(); renderStandings(); }
+    closeLiveMatch();
   };
 
   let standingsTab = "period";
@@ -862,6 +1000,39 @@
     }).join("");
   };
   window.deleteSession = async function(idx) { if (!isAdmin) return; history = history.filter((_, i) => i !== idx); await persistHistory(); renderHistory(); renderStandings(); };
+
+  window.renderSuperFriday = function() {
+    const empEl = document.getElementById("sf-empty");
+    const cardEl = document.getElementById("sf-standings-card");
+    const listEl = document.getElementById("sf-history-list");
+    const countEl = document.getElementById("sf-history-count");
+
+    if (!sfHistory.length) { empEl.style.display = "block"; cardEl.style.display = "none"; listEl.innerHTML = ""; countEl.textContent = ""; return; }
+    empEl.style.display = "none"; cardEl.style.display = "block";
+    countEl.textContent = sfHistory.length + " Super Friday avond" + (sfHistory.length !== 1 ? "en" : "") + " gespeeld";
+
+    // Standings
+    renderStandingsTable("table-superfriday", computeStandings(sfHistory));
+
+    // History list
+    listEl.innerHTML = sfHistory.map((s, idx) => {
+      const d = new Date(s.date);
+      const ds = d.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const sc = s.matches.filter(m => m.score).length;
+      const delBtn = isAdmin ? '<button class="btn-delete-session" onclick="deleteSfSession(' + idx + ')">✕</button>' : "";
+      return '<div class="history-session" style="border-color:#8B691433;">' +
+        '<div class="history-header" style="background:linear-gradient(135deg,#1a1008,#1e1810);">' +
+        '<div><span class="history-date">✨ ' + ds + '</span></div>' +
+        '<div class="history-meta"><span>' + (s.players?.length||"?") + ' spl. · ' + s.matches.length + ' wedstr.' + (sc ? ' · ' + sc + ' gescoord' : '') + '</span>' + delBtn + '</div></div>' +
+        '<div class="history-body">' + s.matches.map(m => '<span class="history-match' + (m.score?" has-score":"") + '" style="cursor:pointer" onclick="openLiveMatch(' + idx + ',' + s.matches.indexOf(m) + ',true)">' + m.p1 + ' vs ' + m.p2 + (m.score ? ' (' + m.score.p1c + '–' + m.score.p2c + ')' : '') + '</span>').join("") + '</div></div>';
+    }).join("");
+  };
+
+  window.deleteSfSession = async function(idx) {
+    if (!isAdmin) return;
+    sfHistory = sfHistory.filter((_, i) => i !== idx);
+    await persistSfHistory(); renderSuperFriday();
+  };
 
   init();
 </script>
