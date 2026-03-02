@@ -130,6 +130,10 @@
     .lm-result-pts-label { font-size: 11px; color: #6a6a8a; }
     .lm-result-detail { font-size: 12px; color: #8a8a9a; margin-top: 4px; }
     .lm-save-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #3a6a3a, #4a8a4a); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    .lm-mode-btn { flex: 1; padding: 8px; background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 8px; color: #6a6a8a; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .lm-mode-btn.active { background: #1e1808; border-color: #8B6914; color: #D4A017; font-weight: bold; }
+    .lm-quick-input { width: 80px; padding: 7px 10px; background: #1a1a26; border: 1px solid #3a3a4a; border-radius: 6px; color: #e8e0d4; font-size: 16px; font-family: inherit; text-align: center; outline: none; }
+    .lm-quick-input:focus { border-color: #8B6914; }
     .standings-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
     .standings-tab { padding: 7px 16px; background: transparent; color: #8a7a5a; border: 1px solid #2a2218; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
     .standings-tab.active { background: #1a1208; color: #D4A017; border-color: #8B6914; }
@@ -269,38 +273,93 @@
       <div class="lm-title" id="lm-title">Wedstrijd invoeren</div>
       <button class="lm-close" onclick="closeLiveMatch()">&#x2715;</button>
     </div>
+
+    <!-- Mode toggle -->
+    <div style="display:flex;gap:6px;padding:12px 16px 0;">
+      <button class="lm-mode-btn active" id="lm-mode-live" onclick="setLiveMode('live')">&#x23F1; Beurt voor beurt</button>
+      <button class="lm-mode-btn" id="lm-mode-quick" onclick="setLiveMode('quick')">&#x26A1; Snel invoeren</button>
+    </div>
+
     <div class="lm-players" id="lm-players"></div>
-    <div class="lm-beurt-row">
-      <span class="lm-beurt-label">Beurt:</span>
-      <span><span class="lm-beurt-val" id="lm-beurt-nr">0</span> <span class="lm-beurt-max">/ 20</span></span>
-    </div>
-    <div class="lm-input-section" id="lm-input-section">
-      <div class="lm-input-label" id="lm-input-label">Voer caramboles in:</div>
-      <div class="lm-input-row">
-        <div class="lm-player-input"><label id="lm-label-p1"></label><input type="number" id="lm-input-p1" min="0" placeholder="0" /></div>
-        <div class="lm-player-input"><label id="lm-label-p2"></label><input type="number" id="lm-input-p2" min="0" placeholder="0" /></div>
+
+    <!-- LIVE MODE -->
+    <div id="lm-live-section">
+      <div class="lm-beurt-row">
+        <span class="lm-beurt-label">Beurt:</span>
+        <span><span class="lm-beurt-val" id="lm-beurt-nr">0</span> <span class="lm-beurt-max">/ 20</span></span>
       </div>
-      <div class="lm-turn-btns">
-        <button class="lm-btn-undo" id="lm-undo-btn" onclick="undoTurn()" disabled>&#x21A9; Ongedaan</button>
-        <button class="lm-btn-beurt" id="lm-next-btn" onclick="nextTurn()">Beurt vastleggen &rarr;</button>
+      <div class="lm-input-section" id="lm-input-section">
+        <div class="lm-input-label" id="lm-input-label">Voer caramboles in:</div>
+        <div class="lm-input-row">
+          <div class="lm-player-input"><label id="lm-label-p1"></label><input type="number" id="lm-input-p1" min="0" placeholder="0" /></div>
+          <div class="lm-player-input"><label id="lm-label-p2"></label><input type="number" id="lm-input-p2" min="0" placeholder="0" /></div>
+        </div>
+        <div class="lm-turn-btns">
+          <button class="lm-btn-undo" id="lm-undo-btn" onclick="undoTurn()" disabled>&#x21A9; Ongedaan</button>
+          <button class="lm-btn-beurt" id="lm-next-btn" onclick="nextTurn()">Beurt vastleggen &rarr;</button>
+        </div>
+      </div>
+      <div class="lm-turns-log" id="lm-turns-log" style="display:none">
+        <table>
+          <thead><tr><th>Beurt</th><th id="lm-log-h1"></th><th id="lm-log-h2"></th><th id="lm-log-h1t">Tot.1</th><th id="lm-log-h2t">Tot.2</th></tr></thead>
+          <tbody id="lm-log-body"></tbody>
+        </table>
+      </div>
+      <div class="lm-finish-section" id="lm-finish-section" style="display:none">
+        <div class="lm-result-row" id="lm-result-row"></div>
+        <button class="lm-save-btn" onclick="saveMatchResult()">&#x1F4BE; Resultaat opslaan</button>
       </div>
     </div>
-    <div class="lm-turns-log" id="lm-turns-log" style="display:none">
-      <table>
-        <thead><tr><th>Beurt</th><th id="lm-log-h1"></th><th id="lm-log-h2"></th><th id="lm-log-h1t">Tot.1</th><th id="lm-log-h2t">Tot.2</th></tr></thead>
-        <tbody id="lm-log-body"></tbody>
-      </table>
+
+    <!-- QUICK MODE -->
+    <div id="lm-quick-section" style="display:none;padding:14px 16px 18px;">
+      <div style="font-size:13px;color:#8a7a6a;margin-bottom:14px;">Voer de eindstand in van de wedstrijd.</div>
+      <div class="lm-input-row" style="margin-bottom:16px;">
+        <div class="lm-player-input">
+          <label id="lm-q-label-p1" style="font-size:13px;color:#D4A017;margin-bottom:6px;"></label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Caramboles</span>
+              <input type="number" id="lm-q-car-p1" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Beurten</span>
+              <input type="number" id="lm-q-turns-p1" min="1" max="20" placeholder="max 20" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Hoogste serie</span>
+              <input type="number" id="lm-q-top-p1" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+          </div>
+        </div>
+        <div class="lm-player-input">
+          <label id="lm-q-label-p2" style="font-size:13px;color:#D4A017;margin-bottom:6px;"></label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Caramboles</span>
+              <input type="number" id="lm-q-car-p2" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Beurten</span>
+              <input type="number" id="lm-q-turns-p2" min="1" max="20" placeholder="max 20" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Hoogste serie</span>
+              <input type="number" id="lm-q-top-p2" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="lm-q-error" style="color:#c07070;font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+      <button class="lm-save-btn" onclick="saveQuickResult()">&#x1F4BE; Resultaat opslaan</button>
     </div>
-    <div class="lm-finish-section" id="lm-finish-section" style="display:none">
-      <div class="lm-result-row" id="lm-result-row"></div>
-      <button class="lm-save-btn" onclick="saveMatchResult()">&#x1F4BE; Resultaat opslaan</button>
-    </div>
+
   </div>
 </div>
 
 <div id="app">
   <div id="header">
-    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool by Steffie</div></div></div>
+    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool</div></div></div>
     <nav>
       <button class="active" onclick="switchView('attendance')">&#x1F4CB; Aanwezig</button>
       <button onclick="switchView('schedule')">&#x1F3C6; Schema</button>
@@ -856,9 +915,64 @@
     const t = liveMatch.turns.length;
     liveMatch.done = ex != null || t >= MAX_TURNS || liveMatch.total1 >= liveMatch.peut1 || liveMatch.total2 >= liveMatch.peut2;
     renderLiveMatch();
+    setLiveMode("live");
     document.getElementById("live-match-overlay").classList.add("visible");
   };
   window.closeLiveMatch = function() { document.getElementById("live-match-overlay").classList.remove("visible"); liveMatch = null; };
+
+  window.setLiveMode = function(mode) {
+    document.getElementById("lm-mode-live").className = "lm-mode-btn" + (mode === "live" ? " active" : "");
+    document.getElementById("lm-mode-quick").className = "lm-mode-btn" + (mode === "quick" ? " active" : "");
+    document.getElementById("lm-live-section").style.display = mode === "live" ? "block" : "none";
+    document.getElementById("lm-quick-section").style.display = mode === "quick" ? "block" : "none";
+    if (mode === "quick" && liveMatch) {
+      document.getElementById("lm-q-label-p1").textContent = liveMatch.p1 + " (peut: " + liveMatch.peut1 + ")";
+      document.getElementById("lm-q-label-p2").textContent = liveMatch.p2 + " (peut: " + liveMatch.peut2 + ")";
+      document.getElementById("lm-q-error").textContent = "";
+    }
+  };
+
+  window.saveQuickResult = async function() {
+    if (!liveMatch) return;
+    const { sIdx, mIdx, isSf, p1, p2, peut1, peut2 } = liveMatch;
+    const car1 = parseInt(document.getElementById("lm-q-car-p1").value) || 0;
+    const car2 = parseInt(document.getElementById("lm-q-car-p2").value) || 0;
+    const turns1 = parseInt(document.getElementById("lm-q-turns-p1").value) || 0;
+    const turns2 = parseInt(document.getElementById("lm-q-turns-p2").value) || 0;
+    const top1 = parseInt(document.getElementById("lm-q-top-p1").value) || 0;
+    const top2 = parseInt(document.getElementById("lm-q-top-p2").value) || 0;
+    const errEl = document.getElementById("lm-q-error");
+
+    if (turns1 < 1 || turns2 < 1) { errEl.textContent = "Voer het aantal beurten in voor beide spelers."; return; }
+    if (turns1 > MAX_TURNS || turns2 > MAX_TURNS) { errEl.textContent = "Maximaal " + MAX_TURNS + " beurten per speler."; return; }
+    if (top1 > car1) { errEl.textContent = "Hoogste serie van " + p1 + " kan niet hoger zijn dan het totaal."; return; }
+    if (top2 > car2) { errEl.textContent = "Hoogste serie van " + p2 + " kan niet hoger zijn dan het totaal."; return; }
+
+    const pts1 = calcPoints(car1, peut1); const pts2 = calcPoints(car2, peut2);
+    const avg1 = parseFloat((car1 / turns1).toFixed(3)); const avg2 = parseFloat((car2 / turns2).toFixed(3));
+
+    // Build synthetic turns array encoding top series (for standings compatibility)
+    // We store a simplified turns array: one turn with the top serie, rest distributed evenly
+    const makeTurns = (total, nTurns, topSerie) => {
+      const turns = [{ c1: 0, c2: 0 }]; // placeholder — quick mode uses summary fields
+      return turns;
+    };
+
+    const scoreData = {
+      p1c: car1, p2c: car2,
+      turns: [], // no per-turn data in quick mode
+      p1pts: pts1, p2pts: pts2,
+      p1avg: avg1, p2avg: avg2,
+      p1topSerie: top1, p2topSerie: top2,
+      p1turns: turns1, p2turns: turns2,
+      peut1, peut2,
+      quickEntry: true
+    };
+
+    if (isSf) { sfHistory[sIdx].matches[mIdx].score = scoreData; await persistSfHistory(); renderSuperFriday(); }
+    else { history[sIdx].matches[mIdx].score = scoreData; await persistHistory(); renderScheduleView(); renderStandings(); }
+    closeLiveMatch();
+  };
 
   function renderLiveMatch() {
     if (!liveMatch) return;
@@ -939,10 +1053,15 @@
         stats[m.p1].games++; stats[m.p2].games++;
         stats[m.p1].pts += m.score.p1pts; stats[m.p2].pts += m.score.p2pts;
         stats[m.p1].car += m.score.p1c; stats[m.p2].car += m.score.p2c;
-        stats[m.p1].turns += m.score.turns.length; stats[m.p2].turns += m.score.turns.length;
         if (m.score.p1pts > m.score.p2pts) stats[m.p1].wins++; else if (m.score.p2pts > m.score.p1pts) stats[m.p2].wins++;
-        // Highest single-turn series
-        if (m.score.turns && m.score.turns.length) {
+        if (m.score.quickEntry) {
+          stats[m.p1].turns += m.score.p1turns || 0;
+          stats[m.p2].turns += m.score.p2turns || 0;
+          if ((m.score.p1topSerie || 0) > stats[m.p1].topSerie) stats[m.p1].topSerie = m.score.p1topSerie;
+          if ((m.score.p2topSerie || 0) > stats[m.p2].topSerie) stats[m.p2].topSerie = m.score.p2topSerie;
+        } else if (m.score.turns && m.score.turns.length) {
+          stats[m.p1].turns += m.score.turns.length;
+          stats[m.p2].turns += m.score.turns.length;
           const best1 = Math.max(...m.score.turns.map(t => t.c1));
           const best2 = Math.max(...m.score.turns.map(t => t.c2));
           if (best1 > stats[m.p1].topSerie) stats[m.p1].topSerie = best1;
