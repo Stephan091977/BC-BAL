@@ -251,6 +251,14 @@
       </div>
       <div id="change-pin-error"></div>
       <button onclick="logoutAdminFromPanel()" style="margin-top:14px;width:100%;padding:10px;background:transparent;border:1px solid #5a2a2a;border-radius:8px;color:#c07070;font-size:14px;font-family:inherit;cursor:pointer;">Uitloggen als beheerder</button>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #2a2a38;">
+        <h3 style="color:#D4A017;font-size:13px;margin-bottom:10px;">&#x1F511; Schema-pincode wijzigen</h3>
+        <div class="change-pin-row">
+          <input type="password" id="new-schema-pin-input" maxlength="4" placeholder="••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+          <button class="btn btn-gold" onclick="changeSchemaPin()">Opslaan</button>
+        </div>
+        <div id="change-schema-pin-error" style="color:#c07070;font-size:12px;margin-top:6px;min-height:16px;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -359,7 +367,7 @@
 
 <div id="app">
   <div id="header">
-    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool</div></div></div>
+    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool by Steffie</div></div></div>
     <nav>
       <button class="active" onclick="switchView('attendance')">&#x1F4CB; Aanwezig</button>
       <button onclick="switchView('schedule')">&#x1F3C6; Schema</button>
@@ -373,34 +381,64 @@
 
     <!-- ATTENDANCE -->
     <div id="view-attendance" class="view active">
-      <div class="topbar">
-        <div><strong id="present-count" style="color:#D4A017;font-size:18px">0</strong><span id="present-total" style="color:#8a7a5a;font-size:14px"> / 0 aanwezig</span><span id="present-badge" class="badge badge-green" style="display:none"></span></div>
-        <div class="btn-row">
-          <button class="btn btn-gray" onclick="selectAll()">Alles</button>
-          <button class="btn btn-gray" onclick="clearAll()">Wissen</button>
-          <button class="btn btn-green admin-only" id="btn-add-member" onclick="toggleAddMember()">+ Nieuw lid</button>
+
+      <!-- Vergrendeld scherm -->
+      <div id="attendance-lock" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+        <div style="color:#D4A017;font-size:20px;font-weight:bold;margin-bottom:8px;">Aanwezig &amp; Schema</div>
+        <div style="color:#8a7a6a;font-size:14px;margin-bottom:28px;max-width:320px;line-height:1.6;">Voer de pincode in om aanwezigheid te registreren en een schema te genereren.</div>
+        <div class="pin-dots" id="schema-pin-dots" style="margin-bottom:20px;">
+          <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
         </div>
+        <div class="pin-pad" style="max-width:240px;width:100%;">
+          <button class="pin-btn" onclick="schemaPinInput('1')">1</button>
+          <button class="pin-btn" onclick="schemaPinInput('2')">2</button>
+          <button class="pin-btn" onclick="schemaPinInput('3')">3</button>
+          <button class="pin-btn" onclick="schemaPinInput('4')">4</button>
+          <button class="pin-btn" onclick="schemaPinInput('5')">5</button>
+          <button class="pin-btn" onclick="schemaPinInput('6')">6</button>
+          <button class="pin-btn" onclick="schemaPinInput('7')">7</button>
+          <button class="pin-btn" onclick="schemaPinInput('8')">8</button>
+          <button class="pin-btn" onclick="schemaPinInput('9')">9</button>
+          <button class="pin-btn del" onclick="schemaPinInput('del')">&#x232B;</button>
+          <button class="pin-btn" onclick="schemaPinInput('0')">0</button>
+          <button class="pin-btn del" onclick="schemaPinInput('clr')">&#x2715;</button>
+        </div>
+        <div id="schema-pin-error" style="color:#c07070;font-size:13px;min-height:18px;margin-top:12px;"></div>
       </div>
-      <div id="add-member-form">
-        <label>Naam:</label>
-        <input id="new-member-input" placeholder="Voor- en achternaam" onkeydown="handleAddKey(event)" oninput="clearAddError()" />
-        <label>Peut:</label>
-        <input id="new-member-peut" type="number" min="1" max="200" placeholder="20" style="width:65px;padding:7px 8px;background:#0f1a12;border:1px solid #3a5a3a;border-radius:6px;color:#D4A017;font-size:14px;font-family:inherit;outline:none;" />
-        <button class="btn-add" onclick="addMember()">Toevoegen</button>
-        <button class="btn btn-gray" onclick="toggleAddMember()">Annuleren</button>
-        <div id="add-member-error"></div>
+
+      <!-- Ontgrendeld scherm -->
+      <div id="attendance-content" style="display:none;">
+        <div class="topbar">
+          <div><strong id="present-count" style="color:#D4A017;font-size:18px">0</strong><span id="present-total" style="color:#8a7a5a;font-size:14px"> / 0 aanwezig</span><span id="present-badge" class="badge badge-green" style="display:none"></span></div>
+          <div class="btn-row">
+            <button class="btn btn-gray" onclick="selectAll()">Alles</button>
+            <button class="btn btn-gray" onclick="clearAll()">Wissen</button>
+            <button class="btn btn-green admin-only" id="btn-add-member" onclick="toggleAddMember()">+ Nieuw lid</button>
+            <button class="btn btn-gray" onclick="lockAttendance()" style="font-size:12px;">🔒 Vergrendel</button>
+          </div>
+        </div>
+        <div id="add-member-form">
+          <label>Naam:</label>
+          <input id="new-member-input" placeholder="Voor- en achternaam" onkeydown="handleAddKey(event)" oninput="clearAddError()" />
+          <label>Peut:</label>
+          <input id="new-member-peut" type="number" min="1" max="200" placeholder="20" style="width:65px;padding:7px 8px;background:#0f1a12;border:1px solid #3a5a3a;border-radius:6px;color:#D4A017;font-size:14px;font-family:inherit;outline:none;" />
+          <button class="btn-add" onclick="addMember()">Toevoegen</button>
+          <button class="btn btn-gray" onclick="toggleAddMember()">Annuleren</button>
+          <div id="add-member-error"></div>
+        </div>
+        <input class="text-input" id="search-input" placeholder="Zoek lid&#x2026;" oninput="renderMembers()" />
+        <div id="member-grid"></div>
+        <div id="confirm-hint"></div>
+        <div id="present-warning" style="display:none;margin-top:16px;padding:12px 16px;background:#2a1a0a;border:1px solid #8a6a3a;border-radius:8px;color:#c8a060;font-size:14px;text-align:center;">
+          ⚠ Het totaal aantal wedstrijden is oneven. Pas het aantal wedstrijden van één speler aan zodat het totaal even wordt.
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;">
+          <button class="avond-type-btn active" id="btn-type-regular" onclick="setAvondType('regular')">&#x1F3B1; Reguliere avond</button>
+          <button class="avond-type-btn" id="btn-type-superfriday" onclick="setAvondType('superfriday')">&#x2728; Super Friday!</button>
+        </div>
+        <button id="generate-btn" onclick="generateSchedule()" disabled>&#x1F3B1; Genereer Schema</button>
       </div>
-      <input class="text-input" id="search-input" placeholder="Zoek lid&#x2026;" oninput="renderMembers()" />
-      <div id="member-grid"></div>
-      <div id="confirm-hint"></div>
-      <div id="present-warning" style="display:none;margin-top:16px;padding:12px 16px;background:#2a1a0a;border:1px solid #8a6a3a;border-radius:8px;color:#c8a060;font-size:14px;text-align:center;">
-        ⚠ Het totaal aantal wedstrijden is oneven. Pas het aantal wedstrijden van één speler aan zodat het totaal even wordt.
-      </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;">
-        <button class="avond-type-btn active" id="btn-type-regular" onclick="setAvondType('regular')">&#x1F3B1; Reguliere avond</button>
-        <button class="avond-type-btn" id="btn-type-superfriday" onclick="setAvondType('superfriday')">&#x2728; Super Friday!</button>
-      </div>
-      <button id="generate-btn" onclick="generateSchedule()" disabled>&#x1F3B1; Genereer Schema</button>
     </div>
 
     <!-- SUPER FRIDAY -->
@@ -496,6 +534,7 @@
   const MAX_TURNS = 20;
   const ADMIN_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
   const DEFAULT_PIN = "1234";
+  const DEFAULT_SCHEMA_PIN = "5678";
 
   let db = null;
   let members = DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 }));
@@ -513,6 +552,11 @@
 
   // ── Admin state ────────────────────────────────────────────────────────────
   let adminPin = localStorage.getItem("biljart_pin") || DEFAULT_PIN;
+  let schemaPin = localStorage.getItem("biljart_schema_pin") || DEFAULT_SCHEMA_PIN;
+  let isSchemaUnlocked = false;
+  let schemaExpiry = null;
+  let schemaTimerInterval = null;
+  let schemaPinBuffer = "";
   let isAdmin = false;
   let adminExpiry = null;
   let pinBuffer = "";
@@ -646,6 +690,68 @@
     if (saved && Date.now() < saved) { isAdmin = true; adminExpiry = saved; adminTimerInterval = setInterval(() => { checkAdminExpiry(); updateAdminUI(); }, 10000); }
   })();
 
+  // ── Schema pin ─────────────────────────────────────────────────────────────
+  function unlockSchema() {
+    isSchemaUnlocked = true;
+    schemaExpiry = Date.now() + ADMIN_TIMEOUT_MS;
+    localStorage.setItem("biljart_schema_expiry", schemaExpiry);
+    schemaTimerInterval && clearInterval(schemaTimerInterval);
+    schemaTimerInterval = setInterval(() => {
+      if (schemaExpiry && Date.now() > schemaExpiry) { lockAttendance(); }
+    }, 10000);
+    document.getElementById("attendance-lock").style.display = "none";
+    document.getElementById("attendance-content").style.display = "block";
+    schemaPinBuffer = "";
+    updateSchemaPinDots();
+  }
+
+  window.lockAttendance = function() {
+    isSchemaUnlocked = false; schemaExpiry = null;
+    localStorage.removeItem("biljart_schema_expiry");
+    schemaTimerInterval && clearInterval(schemaTimerInterval);
+    document.getElementById("attendance-lock").style.display = "flex";
+    document.getElementById("attendance-content").style.display = "none";
+    schemaPinBuffer = "";
+    updateSchemaPinDots();
+    document.getElementById("schema-pin-error").textContent = "";
+  };
+
+  window.schemaPinInput = function(val) {
+    if (val === "del") { schemaPinBuffer = schemaPinBuffer.slice(0, -1); }
+    else if (val === "clr") { schemaPinBuffer = ""; }
+    else if (schemaPinBuffer.length < 4) { schemaPinBuffer += val; }
+    updateSchemaPinDots();
+    document.getElementById("schema-pin-error").textContent = "";
+    if (schemaPinBuffer.length === 4) {
+      setTimeout(() => {
+        if (schemaPinBuffer === schemaPin) { unlockSchema(); }
+        else { document.getElementById("schema-pin-error").textContent = "Onjuiste pincode, probeer opnieuw."; schemaPinBuffer = ""; updateSchemaPinDots(); }
+      }, 150);
+    }
+  };
+
+  function updateSchemaPinDots() {
+    document.querySelectorAll("#schema-pin-dots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < schemaPinBuffer.length));
+  }
+
+  window.changeSchemaPin = function() {
+    const newPin = document.getElementById("new-schema-pin-input").value.trim();
+    const errEl = document.getElementById("change-schema-pin-error");
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { errEl.textContent = "Pincode moet precies 4 cijfers zijn."; return; }
+    schemaPin = newPin;
+    localStorage.setItem("biljart_schema_pin", schemaPin);
+    errEl.textContent = ""; errEl.style.color = "#4a8a4a";
+    document.getElementById("new-schema-pin-input").value = "";
+    errEl.textContent = "✓ Pincode gewijzigd!";
+    setTimeout(() => { errEl.textContent = ""; errEl.style.color = "#c07070"; }, 2000);
+  };
+
+  // Restore schema session if within expiry
+  (function restoreSchema() {
+    const saved = parseInt(localStorage.getItem("biljart_schema_expiry") || "0");
+    if (saved && Date.now() < saved) { isSchemaUnlocked = true; schemaExpiry = saved; schemaTimerInterval = setInterval(() => { if (schemaExpiry && Date.now() > schemaExpiry) lockAttendance(); }, 10000); }
+  })();
+
   function loadConfig() { try { return JSON.parse(localStorage.getItem("biljart_firebase_config")); } catch { return null; } }
 
   window.saveConfig = async function() {
@@ -680,6 +786,11 @@
     document.getElementById("loading").style.display = "none";
     document.getElementById("app").style.display = "block";
     updateAdminUI();
+    // Show correct attendance panel
+    if (isSchemaUnlocked) {
+      document.getElementById("attendance-lock").style.display = "none";
+      document.getElementById("attendance-content").style.display = "block";
+    }
     renderMembers(); renderHistory(); renderPeriodPanel(); renderScheduleView(); renderStandings(); renderPeutGrid(); renderSuperFriday();
   }
 
