@@ -849,15 +849,18 @@
 
   function getCutoff() { if (periodStartDate) return periodStartDate; const d = new Date(); d.setDate(d.getDate() - periodWeeks * 7); return d; }
 
-  function pairCountPeriod() {
+  function pairCountPeriod(skipFirst = false) {
     const cutoff = getCutoff(); const counts = {};
-    for (const s of history) { if (new Date(s.date) >= cutoff) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); counts[k] = (counts[k] || 0) + 1; } } }
+    const list = skipFirst ? history.slice(1) : history;
+    for (const s of list) { if (new Date(s.date) >= cutoff) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); counts[k] = (counts[k] || 0) + 1; } } }
     return counts;
   }
 
   function buildSchedule(arr) {
     const cutoff = getCutoff(); const recent = new Set(); const all = {};
-    for (const s of history) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); all[k] = (all[k] || 0) + 1; if (new Date(s.date) >= cutoff) recent.add(k); } }
+    // Sla history[0] over als dat de huidige avond is (saved=true), anders telt vanavond mee als herhaling
+    const historyToCheck = saved ? history.slice(1) : history;
+    for (const s of historyToCheck) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); all[k] = (all[k] || 0) + 1; if (new Date(s.date) >= cutoff) recent.add(k); } }
 
     // Build a "slots" array: each player appears as many times as their wedstrijden count
     const slots = [];
@@ -1073,7 +1076,7 @@
     const emp = document.getElementById("schedule-empty"); const con = document.getElementById("schedule-content");
     if (!schedule) { emp.style.display = "block"; con.style.display = "none"; return; }
     emp.style.display = "none"; con.style.display = "block";
-    const pc = pairCountPeriod(); const cf = schedule.matches.filter(m => pc[matchKey(m.p1, m.p2)] > 0).length;
+    const pc = pairCountPeriod(saved); const cf = schedule.matches.filter(m => pc[matchKey(m.p1, m.p2)] > 0).length;
     document.getElementById("schedule-badges").innerHTML = '<span class="badge badge-green">' + present.size + ' spelers</span><span class="badge badge-blue">' + schedule.matches.length + ' wedstrijden</span>' + (cf > 0 ? '<span class="badge badge-red">&#x26A0; ' + cf + ' herhal' + (cf===1?"ing":"ingen") + ' in periode</span>' : '<span class="badge badge-green">&#x2713; Geen herhalingen</span>');
     const sb = document.getElementById("save-btn"); sb.textContent = saved ? "✓ Opgeslagen" : "💾 Bevestig & Sla Op"; sb.className = "btn-save" + (saved ? " saved" : ""); sb.disabled = saved;
 
