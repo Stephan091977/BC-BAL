@@ -1,0 +1,14 @@
+{
+  "name": "BC BAL Wedstrijdentool",
+  "short_name": "BC BAL",
+  "description": "Wedstrijdschema en klassement voor biljartclub BC BAL",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f18",
+  "theme_color": "#D4A017",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
