@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BC BAL">
+  <meta name="theme-color" content="#D4A017">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🎱 BC BAL Wedstrijdentool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: #0f0f13; color: #e8e0d4; font-family: Georgia, 'Times New Roman', serif; }
+    #header { background: linear-gradient(135deg, #1a1208 0%, #0f0f13 100%); border-bottom: 2px solid #8B6914; padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 24px; }
+    .logo-title { font-size: 20px; font-weight: bold; color: #D4A017; letter-spacing: 1px; }
+    .logo-sub { font-size: 10px; color: #8a7a5a; letter-spacing: 2px; text-transform: uppercase; }
+    nav { display: flex; gap: 3px; flex-wrap: wrap; }
+    nav button { padding: 6px 11px; background: transparent; color: #8a7a5a; border: 1px solid #2a2218; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.15s; }
+    nav button.active { background: #8B6914; color: #fff; border-color: #8B6914; }
+    #loading { position: fixed; inset: 0; background: #0f0f13; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 999; font-size: 18px; color: #8a7a5a; }
+    .spinner { font-size: 40px; animation: spin 1.5s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #setup-screen { max-width: 520px; margin: 60px auto; padding: 32px; background: #16161e; border: 1px solid #2a2a38; border-radius: 16px; display: none; }
+    #setup-screen h2 { color: #D4A017; margin-bottom: 8px; font-size: 20px; }
+    #setup-screen p { color: #8a7a6a; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+    #setup-screen label { display: block; color: #a0a0b8; font-size: 13px; margin-bottom: 6px; margin-top: 14px; }
+    #setup-screen input { width: 100%; padding: 9px 12px; background: #1a1a26; border: 1px solid #3a3a4a; border-radius: 6px; color: #e8e0d4; font-size: 13px; font-family: inherit; outline: none; }
+    #setup-screen input:focus { border-color: #8B6914; }
+    #setup-error { color: #c07070; font-size: 13px; margin-top: 10px; min-height: 20px; }
+    #setup-btn { margin-top: 20px; width: 100%; padding: 11px; background: linear-gradient(135deg, #8B6914, #b8850a); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    #app { display: none; }
+    #main { max-width: 960px; margin: 0 auto; padding: 20px 14px; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 8px; font-size: 12px; margin-left: 8px; }
+    .badge-green  { background: #1a2e14; color: #4a8a4a; border: 1px solid #4a8a4a44; }
+    .badge-blue   { background: #1a1a2e; color: #4a4a8a; border: 1px solid #4a4a8a44; }
+    .badge-red    { background: #2e1a1a; color: #8a4a4a; border: 1px solid #8a4a4a44; }
+    button.btn { padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; transition: opacity 0.15s; }
+    button.btn:hover { opacity: 0.85; }
+    button.btn-gray  { background: #2a2218; color: #8a7a5a; border: 1px solid #8a7a5a33; }
+    button.btn-green { background: #1a2a1a; color: #5a9a5a; border: 1px solid #5a9a5a33; }
+    button.btn-gold  { background: #2a2218; color: #D4A017; border: 1px solid #D4A01733; }
+    button.btn-red   { background: #2a1a1a; color: #c07070; border: 1px solid #c0707033; }
+    button.btn-save { padding: 6px 14px; background: #8B6914; color: #fff; border: 1px solid #8B6914; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+    button.btn-save.saved { background: #1a2e14; color: #4a8a4a; border-color: #3a5a3a; cursor: default; }
+    #member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+    .member-item { position: relative; }
+    .member-btn { width: 100%; padding: 10px 100px 10px 14px; background: #16161e; border: 1px solid #2a2a38; border-radius: 8px; color: #8a7a6a; cursor: pointer; text-align: left; font-size: 14px; font-family: inherit; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+    .member-btn.present { background: linear-gradient(135deg, #1a2e14, #223a1a); border-color: #4a7a3a; color: #7ec87e; }
+    .member-checkbox { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; border: 2px solid #3a3a4a; background: transparent; display: flex; align-items: center; justify-content: center; }
+    .member-btn.present .member-checkbox { border-color: #4a7a3a; background: #4a7a3a; }
+    .member-checkbox-tick { color: #fff; font-size: 11px; display: none; }
+    .member-btn.present .member-checkbox-tick { display: block; }
+    .member-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .member-peut { font-size: 11px; color: #8B6914; background: #1e1808; padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+    .w-selector { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; }
+    .w-btn { padding: 3px 7px; font-size: 11px; font-family: inherit; border-radius: 4px; cursor: pointer; background: #1a1a26; border: 1px solid #2a2a3a; color: #6a6a8a; transition: all 0.15s; }
+    .w-btn:hover { border-color: #8B6914; color: #D4A017; }
+    .w-btn.active { background: #2a1e08; border-color: #8B6914; color: #D4A017; font-weight: bold; }
+    .member-delete { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #4a3a3a; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .member-delete.confirming { background: #5a2020; border: 1px solid #8a4a4a; color: #e07070; }
+    #generate-btn { display: block; margin: 24px auto 0; padding: 12px 40px; background: linear-gradient(135deg, #8B6914, #b8850a); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-family: inherit; cursor: pointer; font-weight: bold; box-shadow: 0 4px 16px rgba(139,105,20,0.4); }
+    #generate-btn:disabled { background: #2a2218; color: #4a4030; box-shadow: none; cursor: default; }
+    #confirm-hint { margin-top: 10px; font-size: 12px; color: #8a6a4a; text-align: center; min-height: 18px; }
+    #add-member-form { display: none; background: #16201a; border: 1px solid #3a5a3a; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #add-member-form.visible { display: flex; }
+    #add-member-form label { color: #6a9a6a; font-size: 13px; white-space: nowrap; }
+    #add-member-form input { flex: 1; min-width: 120px; padding: 7px 12px; background: #0f1a12; border: 1px solid #3a5a3a; border-radius: 6px; color: #e8e0d4; font-size: 14px; font-family: inherit; outline: none; }
+    #add-member-form input.error { border-color: #8a4a4a; }
+    #add-member-error { color: #c07070; font-size: 12px; width: 100%; min-height: 16px; }
+    .btn-add { padding: 7px 16px; background: #3a6a3a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+    input.text-input { width: 100%; padding: 9px 14px; background: #1a1a22; border: 1px solid #2a2a38; color: #e8e0d4; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 14px; }
+    .schedule-col { background: #16161e; border: 1px solid #2a2a38; border-radius: 12px; overflow: hidden; }
+    .schedule-col-header { background: linear-gradient(135deg, #1a1208, #1e1810); padding: 10px 16px; border-bottom: 1px solid #2a2218; display: flex; align-items: center; gap: 8px; }
+    .schedule-col-header strong { color: #D4A017; }
+    .schedule-col-header span { font-size: 12px; color: #6a6a8a; }
+    .schedule-col-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .match-card { background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .match-card:hover { border-color: #8B6914; }
+    .match-card.repeat { background: #1e1010; border-color: #5a2a2a; }
+    .match-card.scored { border-color: #3a5a3a; background: #141e14; }
+    .match-num { color: #4a4a6a; font-size: 12px; min-width: 22px; }
+    .match-players { flex: 1; }
+    .match-p { font-size: 14px; color: #d4cfc0; }
+    .match-peut { font-size: 11px; color: #6a6a8a; margin-left: 6px; font-weight: normal; }
+    .match-card.repeat .match-peut { color: #9a7070; }
+    .match-card.repeat .match-p { color: #c08080; }
+    .match-vs { font-size: 11px; color: #4a4a6a; margin: 2px 0; }
+    .match-score-badge { font-size: 11px; color: #4a8a4a; background: #1a2e1a; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+    #live-match-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 100; overflow-y: auto; padding: 16px; align-items: flex-start; justify-content: center; }
+    #live-match-overlay.visible { display: flex; }
+    #live-match-box { background: #16161e; border: 1px solid #8B6914; border-radius: 16px; max-width: 560px; width: 100%; margin: auto; overflow: hidden; }
+    .lm-header { background: linear-gradient(135deg, #1a1208, #1e1810); padding: 14px 18px; border-bottom: 1px solid #2a2218; display: flex; justify-content: space-between; align-items: center; }
+    .lm-title { color: #D4A017; font-size: 16px; font-weight: bold; }
+    .lm-close { background: transparent; border: none; color: #6a6a8a; font-size: 20px; cursor: pointer; padding: 0 4px; }
+    .lm-players { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+    .lm-player { background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 10px; padding: 14px; text-align: center; }
+    .lm-player.winner { border-color: #D4A017; background: #1e1a0a; }
+    .lm-player-name { font-size: 15px; font-weight: bold; color: #e8e0d4; margin-bottom: 4px; }
+    .lm-player-peut { font-size: 12px; color: #8B6914; margin-bottom: 10px; }
+    .lm-score-big { font-size: 48px; font-weight: bold; color: #D4A017; line-height: 1; }
+    .lm-score-sub { font-size: 12px; color: #6a6a8a; margin-top: 4px; }
+    .lm-progress-bar { height: 6px; background: #2a2a3a; border-radius: 3px; margin: 8px 0; overflow: hidden; }
+    .lm-progress-fill { height: 100%; background: linear-gradient(90deg, #8B6914, #D4A017); border-radius: 3px; transition: width 0.3s; }
+    .lm-progress-fill.done { background: linear-gradient(90deg, #3a7a3a, #5aaa5a); }
+    .lm-beurt-row { padding: 0 16px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .lm-beurt-label { color: #8a7a6a; font-size: 14px; }
+    .lm-beurt-val { color: #D4A017; font-size: 18px; font-weight: bold; }
+    .lm-beurt-max { color: #4a4a6a; font-size: 13px; }
+    .lm-input-section { padding: 0 16px 16px; }
+    .lm-input-label { font-size: 13px; color: #8a7a6a; margin-bottom: 8px; }
+    .lm-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .lm-player-input { display: flex; flex-direction: column; gap: 6px; }
+    .lm-player-input label { font-size: 12px; color: #a0a0b8; }
+    .lm-player-input input { width: 100%; padding: 10px; background: #1a1a26; border: 1px solid #3a3a4a; border-radius: 8px; color: #e8e0d4; font-size: 20px; font-family: inherit; text-align: center; outline: none; }
+    .lm-player-input input:focus { border-color: #8B6914; }
+    .lm-turn-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .lm-btn-beurt { flex: 1; padding: 12px; background: linear-gradient(135deg, #8B6914, #b8850a); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    .lm-btn-beurt:disabled { background: #2a2218; color: #4a4030; cursor: default; }
+    .lm-btn-undo { padding: 12px 16px; background: #2a2218; color: #8a7a5a; border: 1px solid #4a3a2833; border-radius: 8px; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .lm-turns-log { padding: 0 16px 12px; max-height: 160px; overflow-y: auto; }
+    .lm-turns-log table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .lm-turns-log th { color: #6a6a8a; padding: 4px 8px; text-align: center; border-bottom: 1px solid #2a2a3a; font-weight: normal; }
+    .lm-turns-log td { padding: 4px 8px; text-align: center; color: #a0a0b8; border-bottom: 1px solid #1e1e2a; }
+    .lm-finish-section { padding: 12px 16px 16px; border-top: 1px solid #2a2a38; }
+    .lm-result-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .lm-result-card { background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 8px; padding: 10px; text-align: center; }
+    .lm-result-card.winner { border-color: #D4A017; background: #1e1a0a; }
+    .lm-result-name { font-size: 12px; color: #8a7a6a; margin-bottom: 4px; }
+    .lm-result-pts { font-size: 28px; font-weight: bold; color: #D4A017; }
+    .lm-result-pts-label { font-size: 11px; color: #6a6a8a; }
+    .lm-result-detail { font-size: 12px; color: #8a8a9a; margin-top: 4px; }
+    .lm-save-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #3a6a3a, #4a8a4a); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    .lm-mode-btn { flex: 1; padding: 8px; background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 8px; color: #6a6a8a; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .lm-mode-btn.active { background: #1e1808; border-color: #8B6914; color: #D4A017; font-weight: bold; }
+    .lm-quick-input { width: 80px; padding: 7px 10px; background: #1a1a26; border: 1px solid #3a3a4a; border-radius: 6px; color: #e8e0d4; font-size: 16px; font-family: inherit; text-align: center; outline: none; }
+    .lm-quick-input:focus { border-color: #8B6914; }
+    .standings-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .standings-tab { padding: 7px 16px; background: transparent; color: #8a7a5a; border: 1px solid #2a2218; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+    .standings-tab.active { background: #1a1208; color: #D4A017; border-color: #8B6914; }
+    .card { background: #16161e; border: 1px solid #2a2a38; border-radius: 12px; overflow: hidden; }
+    .card-header { background: linear-gradient(135deg, #1a1208, #1e1810); padding: 10px 16px; border-bottom: 1px solid #2a2218; display: flex; align-items: center; gap: 8px; }
+    .card-header strong { color: #D4A017; }
+    .standings-table { width: 100%; border-collapse: collapse; }
+    .standings-table th { padding: 10px 12px; text-align: left; font-size: 12px; color: #6a6a8a; border-bottom: 1px solid #2a2a38; font-weight: normal; text-transform: uppercase; }
+    .standings-table th.num, .standings-table td.num { text-align: right; }
+    .standings-table td { padding: 10px 12px; border-bottom: 1px solid #1e1e26; font-size: 14px; }
+    .standings-table td.num { color: #a0a0b8; }
+    .standings-table td.pts { color: #D4A017; font-weight: bold; text-align: right; }
+    .standings-table tr:hover td { background: #1a1a22; }
+    .rank-medal { font-size: 16px; }
+    .peut-editor { background: #16161e; border: 1px solid #2a2a38; border-radius: 12px; padding: 20px; margin-top: 20px; }
+    .peut-editor h3 { color: #D4A017; font-size: 15px; margin-bottom: 8px; }
+    .peut-editor p { font-size: 13px; color: #8a7a6a; margin-bottom: 14px; }
+    .peut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+    .peut-row { display: flex; align-items: center; gap: 10px; background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 8px; padding: 8px 12px; }
+    .peut-name { flex: 1; font-size: 13px; color: #d4cfc0; }
+    .peut-input { width: 60px; padding: 5px 8px; background: #0f0f18; border: 1px solid #3a3a4a; border-radius: 6px; color: #D4A017; font-size: 14px; font-family: inherit; text-align: center; outline: none; }
+    .peut-input:focus { border-color: #8B6914; }
+    .peut-label { font-size: 11px; color: #6a6a8a; }
+    .period-panel { background: #16161e; border: 1px solid #2a2a38; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+    .period-panel h3 { color: #D4A017; font-size: 15px; margin-bottom: 16px; }
+    .period-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .period-row label { color: #a0a0b8; font-size: 14px; min-width: 140px; }
+    .period-slider { -webkit-appearance: none; appearance: none; width: 160px; height: 6px; border-radius: 3px; background: #2a2a3a; outline: none; cursor: pointer; }
+    .period-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #8B6914; cursor: pointer; }
+    .period-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #8B6914; cursor: pointer; border: none; }
+    .period-value { font-size: 15px; color: #D4A017; font-weight: bold; min-width: 60px; }
+    .period-start-info { background: #1a1a26; border: 1px solid #2a2a38; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #8a7a6a; line-height: 1.6; }
+    .new-period-btn { margin-top: 14px; padding: 9px 20px; background: linear-gradient(135deg, #8B6914, #b8850a); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-family: inherit; cursor: pointer; font-weight: bold; }
+    .new-period-confirm { display: none; margin-top: 12px; padding: 12px 16px; background: #1e1010; border: 1px solid #5a2a2a; border-radius: 8px; font-size: 13px; color: #c08080; line-height: 1.6; }
+    .new-period-confirm.visible { display: block; }
+    .confirm-btns { margin-top: 10px; display: flex; gap: 8px; }
+    .history-session { margin-bottom: 12px; background: #16161e; border: 1px solid #2a2a3a; border-radius: 12px; overflow: hidden; }
+    .history-session.old { border-color: #1e1e24; opacity: 0.6; }
+    .history-header { padding: 10px 16px; background: linear-gradient(135deg, #1a1208, #1a1a22); border-bottom: 1px solid #22222e; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .history-date { color: #D4A017; font-weight: bold; font-size: 14px; }
+    .history-period-tag { margin-left: 8px; font-size: 11px; color: #4a8a4a; background: #1a2e1a; padding: 1px 6px; border-radius: 6px; }
+    .history-meta { font-size: 12px; color: #6a6a8a; display: flex; align-items: center; gap: 8px; }
+    .history-body { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .history-match { background: #1e1e2a; border: 1px solid #2a2a3a; border-radius: 6px; padding: 3px 10px; font-size: 12px; color: #a0a0b8; }
+    .history-match.has-score { border-color: #3a5a3a; color: #7a9a7a; }
+    .btn-delete-session { background: transparent; border: 1px solid #3a2a2a; color: #6a4a4a; padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: inherit; }
+    .empty-state { text-align: center; padding: 60px; color: #4a4a5a; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .avond-type-btn { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: inherit; border: 1px solid #2a2218; background: #1a1a22; color: #6a6a8a; transition: all 0.15s; }
+    .avond-type-btn.active { background: #1e1808; border-color: #8B6914; color: #D4A017; font-weight: bold; }
+    .avond-type-btn.sf-active { background: #1a1008; border-color: #D4A017; color: #D4A017; font-weight: bold; box-shadow: 0 0 12px rgba(212,160,23,0.3); }
+    .sf-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #1e1808; border: 1px solid #D4A01744; border-radius: 6px; color: #D4A017; font-size: 11px; }
+    .add-match-select { width: 100%; padding: 8px 10px; background: #1a1a26; border: 1px solid #3a3a4a; border-radius: 8px; color: #e8e0d4; font-size: 14px; font-family: inherit; outline: none; cursor: pointer; }
+    .add-match-select:focus { border-color: #8B6914; }
+    .match-card-del { background: transparent; border: none; color: #4a3a3a; font-size: 16px; cursor: pointer; padding: 0 4px; flex-shrink: 0; transition: color 0.15s; }
+    .match-card-del:hover { color: #c07070; }
+    .edit-mode .match-card { border-color: #3a3a4a; }
+    .edit-mode .match-card:hover { border-color: #c07070; }
+    #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; align-items: center; justify-content: center; }
+    #admin-overlay.visible { display: flex; }
+    #admin-box { background: #16161e; border: 1px solid #8B6914; border-radius: 16px; max-width: 360px; width: 100%; padding: 28px; }
+    #admin-box h2 { color: #D4A017; font-size: 18px; margin-bottom: 6px; }
+    #admin-box p { color: #8a7a6a; font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+    .pin-dots { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; }
+    .pin-dot { width: 16px; height: 16px; border-radius: 50%; background: #2a2a3a; border: 2px solid #3a3a4a; transition: all 0.15s; }
+    .pin-dot.filled { background: #8B6914; border-color: #D4A017; }
+    .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .pin-btn { padding: 16px; background: #1a1a26; border: 1px solid #2a2a3a; border-radius: 10px; color: #e8e0d4; font-size: 20px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .pin-btn:hover { background: #2a2a3a; border-color: #8B6914; }
+    .pin-btn.del { font-size: 16px; color: #8a7a5a; }
+    #pin-error { color: #c07070; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; }
+    #pin-cancel { width: 100%; padding: 10px; background: transparent; border: 1px solid #2a2a3a; border-radius: 8px; color: #6a6a8a; font-size: 14px; font-family: inherit; cursor: pointer; }
+    .admin-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid; }
+    .admin-status.on  { background: #1e1808; border-color: #8B691444; color: #D4A017; }
+    .admin-status.on:hover { border-color: #8B6914; }
+    .admin-status.off { background: transparent; border-color: #2a2a2a; color: #4a4a5a; }
+    .admin-status.off:hover { color: #8a7a5a; border-color: #3a3a3a; }
+    .change-pin-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2a38; }
+    .change-pin-section h3 { color: #D4A017; font-size: 13px; margin-bottom: 10px; }
+    .change-pin-row { display: flex; gap: 8px; align-items: center; }
+    .change-pin-row input { flex: 1; padding: 7px 10px; background: #0f0f18; border: 1px solid #3a3a4a; border-radius: 6px; color: #D4A017; font-size: 16px; font-family: inherit; text-align: center; outline: none; letter-spacing: 6px; }
+    .change-pin-row input:focus { border-color: #8B6914; }
+    #change-pin-error { color: #c07070; font-size: 12px; margin-top: 6px; min-height: 16px; }
+  </style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner">🎱</div><div>Laden…</div></div>
+
+<!-- Bevestigingsdialoog -->
+<div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:#16161e;border:1px solid #8a4a4a;border-radius:16px;max-width:380px;width:90%;padding:28px;">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">⚠️</div>
+    <div id="confirm-title" style="color:#e8e0d4;font-size:17px;font-weight:bold;text-align:center;margin-bottom:10px;"></div>
+    <div id="confirm-body" style="color:#8a7a6a;font-size:14px;text-align:center;line-height:1.6;margin-bottom:24px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="confirm-cancel-btn" style="flex:1;padding:11px;background:transparent;border:1px solid #2a2a3a;border-radius:8px;color:#6a6a8a;font-size:14px;font-family:inherit;cursor:pointer;">Annuleren</button>
+      <button id="confirm-ok-btn" style="flex:1;padding:11px;background:linear-gradient(135deg,#8a2020,#b03030);border:none;border-radius:8px;color:#fff;font-size:14px;font-family:inherit;cursor:pointer;font-weight:bold;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin PIN overlay -->
+<div id="admin-overlay">
+  <div id="admin-box">
+    <h2 id="admin-title">🔐 Beheerder inloggen</h2>
+    <p id="admin-desc">Voer de pincode in om beheerderstoegang te krijgen.</p>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinInput('1')">1</button>
+      <button class="pin-btn" onclick="pinInput('2')">2</button>
+      <button class="pin-btn" onclick="pinInput('3')">3</button>
+      <button class="pin-btn" onclick="pinInput('4')">4</button>
+      <button class="pin-btn" onclick="pinInput('5')">5</button>
+      <button class="pin-btn" onclick="pinInput('6')">6</button>
+      <button class="pin-btn" onclick="pinInput('7')">7</button>
+      <button class="pin-btn" onclick="pinInput('8')">8</button>
+      <button class="pin-btn" onclick="pinInput('9')">9</button>
+      <button class="pin-btn del" onclick="pinInput('del')">&#x232B;</button>
+      <button class="pin-btn" onclick="pinInput('0')">0</button>
+      <button class="pin-btn del" onclick="pinInput('clr')">&#x2715;</button>
+    </div>
+    <div id="pin-error"></div>
+    <button id="pin-cancel" onclick="closeAdminOverlay()">Annuleren</button>
+
+    <!-- Change PIN section (only shown when already admin) -->
+    <div class="change-pin-section" id="change-pin-section" style="display:none">
+      <h3>&#x1F511; Pincode wijzigen</h3>
+      <div class="change-pin-row">
+        <input type="password" id="new-pin-input" maxlength="4" placeholder="••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+        <button class="btn btn-gold" onclick="changePin()">Opslaan</button>
+      </div>
+      <div id="change-pin-error"></div>
+      <button onclick="logoutAdminFromPanel()" style="margin-top:14px;width:100%;padding:10px;background:transparent;border:1px solid #5a2a2a;border-radius:8px;color:#c07070;font-size:14px;font-family:inherit;cursor:pointer;">Uitloggen als beheerder</button>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #2a2a38;">
+        <h3 style="color:#D4A017;font-size:13px;margin-bottom:10px;">&#x1F511; Schema-pincode wijzigen</h3>
+        <div class="change-pin-row">
+          <input type="password" id="new-schema-pin-input" maxlength="4" placeholder="••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+          <button class="btn btn-gold" onclick="changeSchemaPin()">Opslaan</button>
+        </div>
+        <div id="change-schema-pin-error" style="color:#c07070;font-size:12px;margin-top:6px;min-height:16px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="setup-screen">
+  <h2>🎱 Biljartclub instellen</h2>
+  <p>Voer je Firebase-configuratie in. Je vindt deze in de <a href="https://console.firebase.google.com" target="_blank" style="color:#D4A017">Firebase Console</a> onder <em>Project-instellingen → Jouw apps → Webconfiguratie</em>.</p>
+  <label>API Key</label><input id="cfg-apiKey" placeholder="AIza..." />
+  <label>Auth Domain</label><input id="cfg-authDomain" placeholder="jouwproject.firebaseapp.com" />
+  <label>Project ID</label><input id="cfg-projectId" placeholder="jouwproject" />
+  <label>App ID</label><input id="cfg-appId" placeholder="1:12345:web:abcdef" />
+  <div id="setup-error"></div>
+  <button id="setup-btn" onclick="saveConfig()">Verbinding testen &amp; opslaan</button>
+</div>
+
+<!-- Live match overlay -->
+<div id="live-match-overlay">
+  <div id="live-match-box">
+    <div class="lm-header">
+      <div class="lm-title" id="lm-title">Wedstrijd invoeren</div>
+      <button class="lm-close" onclick="closeLiveMatch()">&#x2715;</button>
+    </div>
+
+    <!-- Mode toggle -->
+    <div style="display:flex;gap:6px;padding:12px 16px 0;">
+      <button class="lm-mode-btn active" id="lm-mode-live" onclick="setLiveMode('live')">&#x23F1; Beurt voor beurt</button>
+      <button class="lm-mode-btn" id="lm-mode-quick" onclick="setLiveMode('quick')">&#x26A1; Snel invoeren</button>
+    </div>
+
+    <div class="lm-players" id="lm-players"></div>
+
+    <!-- LIVE MODE -->
+    <div id="lm-live-section">
+      <div class="lm-beurt-row">
+        <span class="lm-beurt-label">Beurt:</span>
+        <span><span class="lm-beurt-val" id="lm-beurt-nr">0</span> <span class="lm-beurt-max">/ 20</span></span>
+      </div>
+      <div class="lm-input-section" id="lm-input-section">
+        <div class="lm-input-label" id="lm-input-label">Voer caramboles in:</div>
+        <div class="lm-input-row">
+          <div class="lm-player-input"><label id="lm-label-p1"></label><input type="number" id="lm-input-p1" min="0" placeholder="0" /></div>
+          <div class="lm-player-input"><label id="lm-label-p2"></label><input type="number" id="lm-input-p2" min="0" placeholder="0" /></div>
+        </div>
+        <div class="lm-turn-btns">
+          <button class="lm-btn-undo" id="lm-undo-btn" onclick="undoTurn()" disabled>&#x21A9; Ongedaan</button>
+          <button class="lm-btn-beurt" id="lm-next-btn" onclick="nextTurn()">Beurt vastleggen &rarr;</button>
+        </div>
+      </div>
+      <div class="lm-turns-log" id="lm-turns-log" style="display:none">
+        <table>
+          <thead><tr><th>Beurt</th><th id="lm-log-h1"></th><th id="lm-log-h2"></th><th id="lm-log-h1t">Tot.1</th><th id="lm-log-h2t">Tot.2</th></tr></thead>
+          <tbody id="lm-log-body"></tbody>
+        </table>
+      </div>
+      <div class="lm-finish-section" id="lm-finish-section" style="display:none">
+        <div class="lm-result-row" id="lm-result-row"></div>
+        <button class="lm-save-btn" onclick="saveMatchResult()">&#x1F4BE; Resultaat opslaan</button>
+      </div>
+    </div>
+
+    <!-- QUICK MODE -->
+    <div id="lm-quick-section" style="display:none;padding:14px 16px 18px;">
+      <div style="font-size:13px;color:#8a7a6a;margin-bottom:14px;">Voer de eindstand in van de wedstrijd.</div>
+      <div class="lm-input-row" style="margin-bottom:16px;">
+        <div class="lm-player-input">
+          <label id="lm-q-label-p1" style="font-size:13px;color:#D4A017;margin-bottom:6px;"></label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Caramboles</span>
+              <input type="number" id="lm-q-car-p1" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Beurten</span>
+              <input type="number" id="lm-q-turns-p1" min="1" max="20" placeholder="max 20" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Hoogste serie</span>
+              <input type="number" id="lm-q-top-p1" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+          </div>
+        </div>
+        <div class="lm-player-input">
+          <label id="lm-q-label-p2" style="font-size:13px;color:#D4A017;margin-bottom:6px;"></label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Caramboles</span>
+              <input type="number" id="lm-q-car-p2" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Beurten</span>
+              <input type="number" id="lm-q-turns-p2" min="1" max="20" placeholder="max 20" class="lm-quick-input" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#6a6a8a;width:100px;">Hoogste serie</span>
+              <input type="number" id="lm-q-top-p2" min="0" placeholder="0" class="lm-quick-input" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="lm-q-error" style="color:#c07070;font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+      <button class="lm-save-btn" onclick="saveQuickResult()">&#x1F4BE; Resultaat opslaan</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="app">
+  <div id="header">
+    <div class="logo"><div class="logo-icon">🎱</div><div><div class="logo-title">BC BAL</div><div class="logo-sub">Wedstrijdentool by Steffie</div></div></div>
+    <nav>
+      <button class="active" onclick="switchView('attendance')">&#x1F4CB; Aanwezig</button>
+      <button onclick="switchView('schedule')">&#x1F3C6; Schema</button>
+      <button onclick="switchView('standings')">&#x1F4CA; Stand</button>
+      <button onclick="switchView('superfriday')">&#x2728; Super Friday</button>
+      <button onclick="switchView('history')">&#x1F4DC; Historie</button>
+      <button class="admin-status off" id="admin-nav-btn" onclick="onAdminNavClick()">&#x1F512; Beheerder</button>
+    </nav>
+  </div>
+  <div id="main">
+
+    <!-- ATTENDANCE -->
+    <div id="view-attendance" class="view active">
+
+      <!-- Vergrendeld scherm -->
+      <div id="attendance-lock" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+        <div style="color:#D4A017;font-size:20px;font-weight:bold;margin-bottom:8px;">Aanwezig &amp; Schema</div>
+        <div style="color:#8a7a6a;font-size:14px;margin-bottom:28px;max-width:320px;line-height:1.6;">Voer de pincode in om aanwezigheid te registreren en een schema te genereren.</div>
+        <div class="pin-dots" id="schema-pin-dots" style="margin-bottom:20px;">
+          <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+        </div>
+        <div class="pin-pad" style="max-width:240px;width:100%;">
+          <button class="pin-btn" onclick="schemaPinInput('1')">1</button>
+          <button class="pin-btn" onclick="schemaPinInput('2')">2</button>
+          <button class="pin-btn" onclick="schemaPinInput('3')">3</button>
+          <button class="pin-btn" onclick="schemaPinInput('4')">4</button>
+          <button class="pin-btn" onclick="schemaPinInput('5')">5</button>
+          <button class="pin-btn" onclick="schemaPinInput('6')">6</button>
+          <button class="pin-btn" onclick="schemaPinInput('7')">7</button>
+          <button class="pin-btn" onclick="schemaPinInput('8')">8</button>
+          <button class="pin-btn" onclick="schemaPinInput('9')">9</button>
+          <button class="pin-btn del" onclick="schemaPinInput('del')">&#x232B;</button>
+          <button class="pin-btn" onclick="schemaPinInput('0')">0</button>
+          <button class="pin-btn del" onclick="schemaPinInput('clr')">&#x2715;</button>
+        </div>
+        <div id="schema-pin-error" style="color:#c07070;font-size:13px;min-height:18px;margin-top:12px;"></div>
+      </div>
+
+      <!-- Ontgrendeld scherm -->
+      <div id="attendance-content" style="display:none;">
+        <div class="topbar">
+          <div><strong id="present-count" style="color:#D4A017;font-size:18px">0</strong><span id="present-total" style="color:#8a7a5a;font-size:14px"> / 0 aanwezig</span><span id="present-badge" class="badge badge-green" style="display:none"></span></div>
+          <div class="btn-row">
+            <button class="btn btn-gray" onclick="selectAll()">Alles</button>
+            <button class="btn btn-gray" onclick="clearAll()">Wissen</button>
+            <button class="btn btn-green admin-only" id="btn-add-member" onclick="toggleAddMember()">+ Nieuw lid</button>
+            <button class="btn btn-gray" onclick="lockAttendance()" style="font-size:12px;">🔒 Vergrendel</button>
+          </div>
+        </div>
+        <div id="add-member-form">
+          <label>Naam:</label>
+          <input id="new-member-input" placeholder="Voor- en achternaam" onkeydown="handleAddKey(event)" oninput="clearAddError()" />
+          <label>Peut:</label>
+          <input id="new-member-peut" type="number" min="1" max="200" placeholder="20" style="width:65px;padding:7px 8px;background:#0f1a12;border:1px solid #3a5a3a;border-radius:6px;color:#D4A017;font-size:14px;font-family:inherit;outline:none;" />
+          <button class="btn-add" onclick="addMember()">Toevoegen</button>
+          <button class="btn btn-gray" onclick="toggleAddMember()">Annuleren</button>
+          <div id="add-member-error"></div>
+        </div>
+        <input class="text-input" id="search-input" placeholder="Zoek lid&#x2026;" oninput="renderMembers()" />
+        <div id="member-grid"></div>
+        <div id="confirm-hint"></div>
+        <div id="present-warning" style="display:none;margin-top:16px;padding:12px 16px;background:#2a1a0a;border:1px solid #8a6a3a;border-radius:8px;color:#c8a060;font-size:14px;text-align:center;">
+          ⚠ Het totaal aantal wedstrijden is oneven. Pas het aantal wedstrijden van één speler aan zodat het totaal even wordt.
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;">
+          <button class="avond-type-btn active" id="btn-type-regular" onclick="setAvondType('regular')">&#x1F3B1; Reguliere avond</button>
+          <button class="avond-type-btn" id="btn-type-superfriday" onclick="setAvondType('superfriday')">&#x2728; Super Friday!</button>
+        </div>
+        <button id="generate-btn" onclick="generateSchedule()" disabled>&#x1F3B1; Genereer Schema</button>
+      </div>
+    </div>
+
+    <!-- SUPER FRIDAY -->
+    <div id="view-superfriday" class="view">
+      <div style="background:linear-gradient(135deg,#1a1008,#1e1208);border:1px solid #8B6914;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:32px">✨</div>
+        <div>
+          <div style="color:#D4A017;font-size:18px;font-weight:bold;letter-spacing:1px;">Super Friday!</div>
+          <div style="color:#8a7a5a;font-size:13px;margin-top:2px;">Seizoensklassement — alle Super Friday avonden</div>
+        </div>
+      </div>
+      <div id="sf-empty" class="empty-state" style="display:none"><div class="icon">✨</div><div>Nog geen Super Friday avonden gespeeld</div></div>
+      <div class="card" id="sf-standings-card" style="display:none">
+        <div class="card-header"><strong>&#x1F3C6; Seizoensstand Super Friday</strong></div>
+        <div style="overflow-x:auto"><table class="standings-table" id="table-superfriday"></table></div>
+      </div>
+      <div style="margin-top:20px;" id="sf-history-section">
+        <div style="color:#8a7a5a;font-size:14px;margin-bottom:12px;" id="sf-history-count"></div>
+        <div id="sf-history-list"></div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div id="view-schedule" class="view">
+      <div id="schedule-empty" style="display:none"><div class="empty-state"><div class="icon">🎱</div><div>Ga naar <b style="color:#8a7a6a">Aanwezig</b> om een schema te genereren</div></div></div>
+      <div id="schedule-content" style="display:none">
+        <div class="topbar">
+          <div class="btn-row" id="schedule-badges"></div>
+          <div class="btn-row">
+            <button class="btn btn-gold" onclick="regenerate()">&#x1F504; Opnieuw</button>
+            <button class="btn btn-gray" id="edit-schema-btn" onclick="toggleEditSchema()" style="display:none">&#x270F;&#xFE0F; Bewerken</button>
+            <button class="btn-save" id="save-btn" onclick="confirmSchedule()">&#x1F4BE; Bevestig &amp; Sla Op</button>
+          </div>
+        </div>
+        <div class="schedule-grid" id="schedule-grid"></div>
+        <div style="margin-top:12px;font-size:12px;color:#4a4a6a;text-align:center" id="schedule-hint">Sla het schema eerst op, klik dan op een wedstrijd om de score live in te voeren</div>
+
+        <!-- Wedstrijd toevoegen paneel -->
+        <div id="add-match-panel" style="display:none;margin-top:16px;background:#16161e;border:1px solid #3a5a3a;border-radius:12px;padding:16px 18px;">
+          <div style="color:#D4A017;font-size:14px;font-weight:bold;margin-bottom:12px;">&#x2795; Wedstrijd toevoegen</div>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:12px;">
+            <select id="add-match-p1" class="add-match-select"></select>
+            <span style="color:#6a6a8a;font-size:13px;">vs</span>
+            <select id="add-match-p2" class="add-match-select"></select>
+          </div>
+          <div id="add-match-hint" style="font-size:12px;color:#8a7a5a;margin-bottom:10px;min-height:16px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-green" onclick="addMatchToSchema()" style="flex:1;">&#x2795; Toevoegen</button>
+            <button class="btn btn-gray" onclick="closeAddMatchPanel()">Annuleren</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STANDINGS -->
+    <div id="view-standings" class="view">
+      <div class="standings-tabs">
+        <button class="standings-tab active" onclick="switchStandingsTab('period')">Huidige periode</button>
+        <button class="standings-tab" onclick="switchStandingsTab('season')">Seizoen totaal</button>
+      </div>
+      <div id="standings-period" class="card">
+        <div class="card-header"><strong>Klassement huidige periode</strong></div>
+        <div style="overflow-x:auto"><table class="standings-table" id="table-period"></table></div>
+      </div>
+      <div id="standings-season" class="card" style="display:none;margin-top:16px">
+        <div class="card-header"><strong>Seizoensklassement</strong></div>
+        <div style="overflow-x:auto"><table class="standings-table" id="table-season"></table></div>
+      </div>
+      <div class="peut-editor admin-only">
+        <h3>&#x2699;&#xFE0F; Peut per speler</h3>
+        <p>Het peut is het aantal te maken caramboles per wedstrijd. Wijzigingen worden direct opgeslagen voor alle clubleden.</p>
+        <div class="peut-grid" id="peut-grid"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="view-history" class="view">
+      <div class="period-panel admin-only">
+        <h3>&#x2699;&#xFE0F; Periode-instellingen</h3>
+        <div class="period-row">
+          <label>Periodelengte:</label>
+          <input type="range" class="period-slider" id="period-weeks-slider" min="6" max="8" step="1" value="7" oninput="onSliderChange(this.value)" />
+          <span class="period-value" id="period-weeks-label">7 weken</span>
+          <button class="btn btn-gray" onclick="savePeriodWeeks()" id="period-save-btn" style="display:none">Opslaan</button>
+        </div>
+        <div class="period-start-info" id="period-start-info"></div>
+        <button class="new-period-btn" onclick="showNewPeriodConfirm()">&#x1F504; Nieuwe periode starten</button>
+        <div class="new-period-confirm" id="new-period-confirm">
+          <strong>Weet je het zeker?</strong><br>De periode-teller wordt gereset naar vandaag. De speelhistorie blijft bewaard.
+          <div class="confirm-btns">
+            <button class="btn btn-red" onclick="startNewPeriod()">Ja, start nieuwe periode</button>
+            <button class="btn btn-gray" onclick="hideNewPeriodConfirm()">Annuleren</button>
+          </div>
+        </div>
+      </div>
+      <div id="history-empty" class="empty-state" style="display:none"><div class="icon">&#x1F4DC;</div><div>Nog geen gespeelde avonden</div></div>
+      <div class="topbar" id="history-topbar" style="display:none"><span style="color:#8a7a6a;font-size:14px" id="history-count"></span></div>
+      <div id="history-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const DEFAULT_MEMBERS = ["Stephan Deen","Bart Kuin","Chris Appelman","Dennis Swart","Fred Groot","Harold Visser","Jargo Grooteman","Jeroen Kuin","Joris Botman","Kees Kolenberg","Klaas Jan Rusting","Marco Bakker","Mark Schuitemaker","Michel van der Sluis","Nico Kok","Peter Schuitemaker","Rimbert Morsch","Rob Kolenberg","Rob Sijm","Rob Stavenuiter","Ron Zwan","Ronald Deen","Ronald Koomen","Siem Kolken","Thomas Grent","Wouter Steltenpool"];
+  const MAX_TURNS = 20;
+  const ADMIN_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+  const DEFAULT_PIN = "1234";
+  const DEFAULT_SCHEMA_PIN = "5678";
+
+  let db = null;
+  let members = DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 }));
+  let history = [];
+  let sfHistory = [];   // Super Friday sessies
+  let avondType = "regular"; // "regular" | "superfriday"
+  let present = new Set();
+  let wedstrijden = {};  // name -> 1, 2 or 3
+  let schedule = null;
+  let saved = false;
+  let confirmDelete = null;
+  let periodWeeks = 7;
+  let periodStartDate = null;
+  let liveMatch = null;
+  let editSchemaMode = false;
+
+  // ── Admin state ────────────────────────────────────────────────────────────
+  let adminPin = localStorage.getItem("biljart_pin") || DEFAULT_PIN;
+  let schemaPin = localStorage.getItem("biljart_schema_pin") || DEFAULT_SCHEMA_PIN;
+  let isSchemaUnlocked = false;
+  let schemaExpiry = null;
+  let schemaTimerInterval = null;
+  let schemaPinBuffer = "";
+  let isAdmin = false;
+  let adminExpiry = null;
+  let pinBuffer = "";
+  let pinMode = "login"; // "login" | "change"
+  let adminTimerInterval = null;
+
+  function checkAdminExpiry() {
+    if (isAdmin && adminExpiry && Date.now() > adminExpiry) { logoutAdmin(); }
+  }
+
+  function loginAdmin() {
+    isAdmin = true;
+    adminExpiry = Date.now() + ADMIN_TIMEOUT_MS;
+    localStorage.setItem("biljart_admin_expiry", adminExpiry);
+    adminTimerInterval && clearInterval(adminTimerInterval);
+    adminTimerInterval = setInterval(() => { checkAdminExpiry(); updateAdminUI(); }, 10000);
+    updateAdminUI();
+    renderMembers();
+    renderPeutGrid();
+  }
+
+  function logoutAdmin() {
+    isAdmin = false; adminExpiry = null;
+    localStorage.removeItem("biljart_admin_expiry");
+    adminTimerInterval && clearInterval(adminTimerInterval);
+    updateAdminUI(); renderMembers(); renderPeutGrid();
+  }
+
+  function updateAdminUI() {
+    const btn = document.getElementById("admin-nav-btn");
+    if (isAdmin) {
+      const mins = Math.max(0, Math.round((adminExpiry - Date.now()) / 60000));
+      btn.className = "admin-status on";
+      btn.innerHTML = "&#x1F513; Beheerder (" + mins + "m) &nbsp;<span style='font-size:10px;opacity:0.7'>uitloggen</span>";
+    } else {
+      btn.className = "admin-status off";
+      btn.innerHTML = "&#x1F512; Beheerder";
+    }
+    // Show/hide admin-only elements
+    document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin ? "" : "none");
+    document.querySelectorAll(".admin-only-flex").forEach(el => el.style.display = isAdmin ? "flex" : "none");
+  }
+
+  window.onAdminNavClick = function() {
+    if (isAdmin) {
+      // Already logged in: show settings panel with change-pin option
+      openAdminOverlay("settings");
+    } else {
+      openAdminOverlay("login");
+    }
+  };
+
+  function openAdminOverlay(mode) {
+    pinMode = mode; pinBuffer = "";
+    document.getElementById("pin-error").textContent = "";
+    document.getElementById("admin-overlay").classList.add("visible");
+    document.getElementById("pin-dots").style.display = "flex";
+    document.querySelector(".pin-pad").style.display = "grid";
+
+    if (mode === "login") {
+      document.getElementById("admin-title").textContent = "🔐 Beheerder inloggen";
+      document.getElementById("admin-desc").textContent = "Voer de 4-cijferige pincode in.";
+      document.getElementById("change-pin-section").style.display = "none";
+      document.getElementById("pin-cancel").style.display = "block";
+      document.getElementById("pin-cancel").textContent = "Annuleren";
+      document.getElementById("pin-cancel").onclick = closeAdminOverlay;
+    } else {
+      // "settings" mode: already logged in
+      document.getElementById("admin-title").textContent = "⚙️ Beheerdersinstellingen";
+      document.getElementById("admin-desc").textContent = "Voer een nieuwe 4-cijferige pincode in en klik Opslaan.";
+      document.getElementById("change-pin-section").style.display = "block";
+      document.getElementById("new-pin-input").value = "";
+      document.getElementById("change-pin-error").textContent = "";
+      // Hide numpad — not needed in settings mode
+      document.getElementById("pin-dots").style.display = "none";
+      document.querySelector(".pin-pad").style.display = "none";
+      document.getElementById("pin-cancel").style.display = "block";
+      document.getElementById("pin-cancel").textContent = "Sluiten";
+      document.getElementById("pin-cancel").onclick = closeAdminOverlay;
+    }
+    updatePinDots();
+  }
+
+  window.logoutAdminFromPanel = function() { closeAdminOverlay(); logoutAdmin(); };
+
+  window.closeAdminOverlay = function() {
+    document.getElementById("admin-overlay").classList.remove("visible");
+    document.getElementById("pin-dots").style.display = "flex";
+    document.querySelector(".pin-pad").style.display = "grid";
+    pinBuffer = "";
+  };
+
+  window.pinInput = function(val) {
+    if (val === "del") { pinBuffer = pinBuffer.slice(0, -1); }
+    else if (val === "clr") { pinBuffer = ""; }
+    else if (pinBuffer.length < 4) { pinBuffer += val; }
+    updatePinDots();
+    document.getElementById("pin-error").textContent = "";
+    if (pinBuffer.length === 4) {
+      setTimeout(() => {
+        if (pinBuffer === adminPin) {
+          closeAdminOverlay(); loginAdmin();
+        } else {
+          document.getElementById("pin-error").textContent = "Onjuiste pincode, probeer opnieuw.";
+          pinBuffer = ""; updatePinDots();
+        }
+      }, 150);
+    }
+  };
+
+  function updatePinDots() {
+    document.querySelectorAll(".pin-dot").forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
+  }
+
+  window.changePin = function() {
+    const newPin = document.getElementById("new-pin-input").value.trim();
+    const errEl = document.getElementById("change-pin-error");
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { errEl.textContent = "Pincode moet precies 4 cijfers zijn."; return; }
+    adminPin = newPin;
+    localStorage.setItem("biljart_pin", adminPin);
+    errEl.textContent = "";
+    document.getElementById("new-pin-input").value = "";
+    errEl.style.color = "#4a8a4a";
+    errEl.textContent = "✓ Pincode gewijzigd!";
+    setTimeout(() => { errEl.textContent = ""; errEl.style.color = "#c07070"; }, 2000);
+  };
+
+  // Restore admin session if within expiry
+  (function restoreAdmin() {
+    const saved = parseInt(localStorage.getItem("biljart_admin_expiry") || "0");
+    if (saved && Date.now() < saved) { isAdmin = true; adminExpiry = saved; adminTimerInterval = setInterval(() => { checkAdminExpiry(); updateAdminUI(); }, 10000); }
+  })();
+
+  // ── Schema pin ─────────────────────────────────────────────────────────────
+  function unlockSchema() {
+    isSchemaUnlocked = true;
+    schemaExpiry = Date.now() + ADMIN_TIMEOUT_MS;
+    localStorage.setItem("biljart_schema_expiry", schemaExpiry);
+    schemaTimerInterval && clearInterval(schemaTimerInterval);
+    schemaTimerInterval = setInterval(() => {
+      if (schemaExpiry && Date.now() > schemaExpiry) { lockAttendance(); }
+    }, 10000);
+    document.getElementById("attendance-lock").style.display = "none";
+    document.getElementById("attendance-content").style.display = "block";
+    schemaPinBuffer = "";
+    updateSchemaPinDots();
+  }
+
+  window.lockAttendance = function() {
+    isSchemaUnlocked = false; schemaExpiry = null;
+    localStorage.removeItem("biljart_schema_expiry");
+    schemaTimerInterval && clearInterval(schemaTimerInterval);
+    document.getElementById("attendance-lock").style.display = "flex";
+    document.getElementById("attendance-content").style.display = "none";
+    schemaPinBuffer = "";
+    updateSchemaPinDots();
+    document.getElementById("schema-pin-error").textContent = "";
+  };
+
+  window.schemaPinInput = function(val) {
+    if (val === "del") { schemaPinBuffer = schemaPinBuffer.slice(0, -1); }
+    else if (val === "clr") { schemaPinBuffer = ""; }
+    else if (schemaPinBuffer.length < 4) { schemaPinBuffer += val; }
+    updateSchemaPinDots();
+    document.getElementById("schema-pin-error").textContent = "";
+    if (schemaPinBuffer.length === 4) {
+      setTimeout(() => {
+        if (schemaPinBuffer === schemaPin) { unlockSchema(); }
+        else { document.getElementById("schema-pin-error").textContent = "Onjuiste pincode, probeer opnieuw."; schemaPinBuffer = ""; updateSchemaPinDots(); }
+      }, 150);
+    }
+  };
+
+  function updateSchemaPinDots() {
+    document.querySelectorAll("#schema-pin-dots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < schemaPinBuffer.length));
+  }
+
+  window.changeSchemaPin = function() {
+    const newPin = document.getElementById("new-schema-pin-input").value.trim();
+    const errEl = document.getElementById("change-schema-pin-error");
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { errEl.textContent = "Pincode moet precies 4 cijfers zijn."; return; }
+    schemaPin = newPin;
+    localStorage.setItem("biljart_schema_pin", schemaPin);
+    errEl.textContent = ""; errEl.style.color = "#4a8a4a";
+    document.getElementById("new-schema-pin-input").value = "";
+    errEl.textContent = "✓ Pincode gewijzigd!";
+    setTimeout(() => { errEl.textContent = ""; errEl.style.color = "#c07070"; }, 2000);
+  };
+
+  // Restore schema session if within expiry
+  (function restoreSchema() {
+    const saved = parseInt(localStorage.getItem("biljart_schema_expiry") || "0");
+    if (saved && Date.now() < saved) { isSchemaUnlocked = true; schemaExpiry = saved; schemaTimerInterval = setInterval(() => { if (schemaExpiry && Date.now() > schemaExpiry) lockAttendance(); }, 10000); }
+  })();
+
+  function loadConfig() { try { return JSON.parse(localStorage.getItem("biljart_firebase_config")); } catch { return null; } }
+
+  window.saveConfig = async function() {
+    const cfg = { apiKey: document.getElementById("cfg-apiKey").value.trim(), authDomain: document.getElementById("cfg-authDomain").value.trim(), projectId: document.getElementById("cfg-projectId").value.trim(), appId: document.getElementById("cfg-appId").value.trim() };
+    if (!cfg.apiKey || !cfg.projectId) { document.getElementById("setup-error").textContent = "Vul minimaal API Key en Project ID in."; return; }
+    document.getElementById("setup-error").textContent = "Verbinding testen…";
+    try { const app = initializeApp(cfg, "test"); const testDb = getFirestore(app); await getDoc(doc(testDb, "biljart", "members")); localStorage.setItem("biljart_firebase_config", JSON.stringify(cfg)); location.reload(); }
+    catch(e) { document.getElementById("setup-error").textContent = "Verbinding mislukt: " + e.message; }
+  };
+
+  async function init() {
+    const cfg = loadConfig();
+    if (!cfg) { document.getElementById("loading").style.display = "none"; document.getElementById("setup-screen").style.display = "block"; return; }
+    try {
+      const app = initializeApp(cfg); db = getFirestore(app);
+      const [mSnap, hSnap, sSnap, sfSnap] = await Promise.all([getDoc(doc(db, "biljart", "members")), getDoc(doc(db, "biljart", "history")), getDoc(doc(db, "biljart", "settings")), getDoc(doc(db, "biljart", "sfhistory"))]);
+      if (mSnap.exists()) members = mSnap.data().list;
+      if (hSnap.exists()) history = hSnap.data().list;
+      if (sSnap.exists()) { const s = sSnap.data(); periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; }
+      if (sfSnap.exists()) sfHistory = sfSnap.data().list;
+      onSnapshot(doc(db, "biljart", "members"), snap => { if (snap.exists()) { members = snap.data().list; renderMembers(); renderPeutGrid(); renderStandings(); } });
+      onSnapshot(doc(db, "biljart", "history"), snap => { if (snap.exists()) { history = snap.data().list; renderHistory(); renderScheduleView(); renderStandings(); } });
+      onSnapshot(doc(db, "biljart", "settings"), snap => { if (snap.exists()) { const s = snap.data(); periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); } });
+      onSnapshot(doc(db, "biljart", "sfhistory"), snap => { if (snap.exists()) { sfHistory = snap.data().list; renderSuperFriday(); } });
+    } catch(e) {
+      console.warn("Firebase niet beschikbaar:", e);
+      try { members = JSON.parse(localStorage.getItem("biljart_members")) || DEFAULT_MEMBERS.map(n => ({ name: n, peut: 20 })); } catch{}
+      try { history = JSON.parse(localStorage.getItem("biljart_history")) || []; } catch{}
+      try { const s = JSON.parse(localStorage.getItem("biljart_settings")); if (s) { periodWeeks = s.periodWeeks || 7; periodStartDate = s.periodStart ? new Date(s.periodStart) : null; } } catch{}
+      try { sfHistory = JSON.parse(localStorage.getItem("biljart_sfhistory")) || []; } catch{}
+    }
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    updateAdminUI();
+    // Show correct attendance panel
+    if (isSchemaUnlocked) {
+      document.getElementById("attendance-lock").style.display = "none";
+      document.getElementById("attendance-content").style.display = "block";
+    }
+    renderMembers(); renderHistory(); renderPeriodPanel(); renderScheduleView(); renderStandings(); renderPeutGrid(); renderSuperFriday();
+  }
+
+  async function persistMembers() { if (db) await setDoc(doc(db, "biljart", "members"), { list: members }); localStorage.setItem("biljart_members", JSON.stringify(members)); }
+  async function persistHistory() { if (db) await setDoc(doc(db, "biljart", "history"), { list: history }); localStorage.setItem("biljart_history", JSON.stringify(history)); }
+  async function persistSfHistory() { if (db) await setDoc(doc(db, "biljart", "sfhistory"), { list: sfHistory }); localStorage.setItem("biljart_sfhistory", JSON.stringify(sfHistory)); }
+  async function persistSettings() { const s = { periodWeeks, periodStart: periodStartDate ? periodStartDate.toISOString() : null }; if (db) await setDoc(doc(db, "biljart", "settings"), s); localStorage.setItem("biljart_settings", JSON.stringify(s)); }
+
+  function matchKey(a, b) { return [a, b].sort().join("|||"); }
+  function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function getPeut(name) { const m = members.find(m => m.name === name); return (m && m.peut) || 20; }
+  function calcPoints(made, peut) { if (made >= peut) return 10; return Math.floor((made / peut) * 10); }
+
+  function getCutoff() { if (periodStartDate) return periodStartDate; const d = new Date(); d.setDate(d.getDate() - periodWeeks * 7); return d; }
+
+  function pairCountPeriod(skipFirst = false) {
+    const cutoff = getCutoff(); const counts = {};
+    const list = skipFirst ? history.slice(1) : history;
+    for (const s of list) { if (new Date(s.date) >= cutoff) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); counts[k] = (counts[k] || 0) + 1; } } }
+    return counts;
+  }
+
+  function buildSchedule(arr) {
+    const cutoff = getCutoff(); const recent = new Set(); const all = {};
+    // Sla history[0] over als dat de huidige avond is (saved=true), anders telt vanavond mee als herhaling
+    const historyToCheck = saved ? history.slice(1) : history;
+    for (const s of historyToCheck) { for (const m of s.matches) { const k = matchKey(m.p1, m.p2); all[k] = (all[k] || 0) + 1; if (new Date(s.date) >= cutoff) recent.add(k); } }
+
+    // Build a "slots" array: each player appears as many times as their wedstrijden count
+    const slots = [];
+    arr.forEach(name => { const w = wedstrijden[name] || 2; for (let i = 0; i < w; i++) slots.push(name); });
+
+    // Generate pairings by shuffling slots and pairing consecutive entries,
+    // ensuring no player plays themselves
+    let best = null, bestScore = Infinity;
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      const s = shuffle(slots);
+      // Check no self-pairings
+      let valid = true;
+      const ms = [];
+      for (let i = 0; i < s.length; i += 2) {
+        if (s[i] === s[i+1]) { valid = false; break; }
+        ms.push({ p1: s[i], p2: s[i+1] });
+      }
+      if (!valid) continue;
+      // Score: penalise recent pairs and all-time repeats
+      let sc = 0;
+      ms.forEach(m => { const k = matchKey(m.p1, m.p2); if (recent.has(k)) sc += 10; sc += (all[k] || 0); });
+      if (sc < bestScore) { bestScore = sc; best = ms; }
+    }
+    // Fallback if no valid pairing found (very rare): just pair sequentially avoiding self
+    if (!best) {
+      const s = [...slots].sort();
+      const ms = [];
+      for (let i = 0; i < s.length; i += 2) ms.push({ p1: s[i], p2: s[i+1] || s[0] });
+      best = ms;
+    }
+    return { matches: best };
+  }
+
+  window.setAvondType = function(type) {
+    avondType = type;
+    document.getElementById("btn-type-regular").className = "avond-type-btn" + (type === "regular" ? " active" : "");
+    document.getElementById("btn-type-superfriday").className = "avond-type-btn" + (type === "superfriday" ? " sf-active" : "");
+    const btn = document.getElementById("generate-btn");
+    btn.textContent = type === "superfriday" ? "✨ Genereer Super Friday Schema" : "🎱 Genereer Schema";
+  };
+
+  window.switchView = function(view) {
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + view).classList.add("active");
+    document.querySelectorAll("nav button").forEach((b, i) => b.classList.toggle("active", ["attendance","schedule","standings","superfriday","history"][i] === view));
+    if (view === "standings") { renderStandings(); renderPeutGrid(); }
+    if (view === "history") renderHistory();
+    if (view === "superfriday") renderSuperFriday();
+  };
+
+  window.renderMembers = function() {
+    const query = document.getElementById("search-input").value.toLowerCase();
+    const filtered = members.filter(m => m.name.toLowerCase().includes(query));
+    const grid = document.getElementById("member-grid"); grid.innerHTML = "";
+    filtered.forEach(({ name, peut }) => {
+      const isP = present.has(name); const isCon = confirmDelete === name;
+      const w = wedstrijden[name] || 2;
+      const item = document.createElement("div"); item.className = "member-item";
+
+      const btn = document.createElement("button"); btn.className = "member-btn" + (isP ? " present" : "");
+      btn.onclick = () => { confirmDelete = null; togglePresent(name); };
+      btn.innerHTML = '<div class="member-checkbox"><span class="member-checkbox-tick">&#x2713;</span></div><span class="member-name">' + name + '</span><span class="member-peut">' + (peut||20) + '</span>';
+
+      if (isP) {
+        const wsel = document.createElement("div"); wsel.className = "w-selector";
+        [1,2,3].forEach(n => {
+          const wb = document.createElement("button"); wb.className = "w-btn" + (w === n ? " active" : "");
+          wb.textContent = n + "×";
+          wb.onclick = (e) => { e.stopPropagation(); setWedstrijden(name, n); };
+          wsel.appendChild(wb);
+        });
+        item.appendChild(wsel);
+      }
+
+      if (isAdmin) {
+        const del = document.createElement("button"); del.className = "member-delete" + (isCon ? " confirming" : ""); del.title = isCon ? "Klik nogmaals" : "Verwijder"; del.textContent = isCon ? "✓" : "×";
+        del.onclick = (e) => { e.stopPropagation(); handleDeleteMember(name); };
+        item.appendChild(del);
+      }
+      item.appendChild(btn); grid.appendChild(item);
+    });
+    if (!filtered.length && query) grid.innerHTML = '<div style="color:#4a4a5a;padding:20px;text-align:center;font-size:14px">Geen leden gevonden</div>';
+
+    // Totalen berekenen
+    const totalWedstrijden = [...present].reduce((s, n) => s + (wedstrijden[n] || 2), 0);
+    const isEven = totalWedstrijden % 2 === 0;
+    const aantalWedstrijden = totalWedstrijden / 2;
+
+    document.getElementById("present-count").textContent = present.size;
+    document.getElementById("present-total").textContent = " / " + members.length + " aanwezig";
+
+    const b = document.getElementById("present-badge");
+    const warn = document.getElementById("present-warning");
+    if (present.size >= 2) {
+      b.style.display = "inline-flex";
+      if (isEven) {
+        b.className = "badge badge-green";
+        b.textContent = present.size + " spelers · " + aantalWedstrijden + " wedstrijden";
+        warn.style.display = "none";
+      } else {
+        b.className = "badge badge-orange";
+        b.textContent = present.size + " spelers · totaal " + totalWedstrijden + " (oneven!)";
+        warn.style.display = "block";
+      }
+    } else {
+      b.style.display = "none";
+      warn.style.display = "none";
+    }
+    document.getElementById("generate-btn").disabled = present.size < 2 || !isEven;
+  };
+
+  window.togglePresent = function(n) {
+    const doToggle = () => {
+      if (present.has(n)) { present.delete(n); delete wedstrijden[n]; } else { present.add(n); wedstrijden[n] = 2; }
+      schedule = null; saved = false; renderMembers();
+    };
+    if (saved) {
+      showConfirm("Aanwezigheid wijzigen?", "Het schema is al opgeslagen. Als je de aanwezigheid wijzigt en opnieuw genereert, gaan de huidige wedstrijden verloren.", "Ja, toch wijzigen", doToggle);
+    } else { doToggle(); }
+  };
+  window.selectAll = function() {
+    present = new Set(members.map(m => m.name));
+    members.forEach(m => { if (!wedstrijden[m.name]) wedstrijden[m.name] = 2; });
+    schedule = null; saved = false; renderMembers();
+  };
+  window.clearAll = function() { present = new Set(); wedstrijden = {}; schedule = null; saved = false; renderMembers(); };
+  window.setWedstrijden = function(name, n) { wedstrijden[name] = n; schedule = null; saved = false; renderMembers(); };
+
+  window.toggleAddMember = function() {
+    const f = document.getElementById("add-member-form"); f.classList.toggle("visible");
+    if (f.classList.contains("visible")) document.getElementById("new-member-input").focus();
+    else { document.getElementById("new-member-input").value = ""; document.getElementById("new-member-peut").value = ""; document.getElementById("add-member-error").textContent = ""; }
+  };
+  window.handleAddKey = function(e) { if (e.key === "Enter") addMember(); if (e.key === "Escape") toggleAddMember(); };
+  window.clearAddError = function() { document.getElementById("add-member-error").textContent = ""; document.getElementById("new-member-input").classList.remove("error"); };
+  window.addMember = async function() {
+    if (!isAdmin) return;
+    const inp = document.getElementById("new-member-input"); const name = inp.value.trim(); const peut = parseInt(document.getElementById("new-member-peut").value) || 20;
+    const err = document.getElementById("add-member-error");
+    if (!name) { err.textContent = "Voer een naam in."; inp.classList.add("error"); return; }
+    if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) { err.textContent = "Dit lid bestaat al."; inp.classList.add("error"); return; }
+    members = [...members, { name, peut }].sort((a, b) => a.name.split(" ").pop().localeCompare(b.name.split(" ").pop(), "nl"));
+    await persistMembers(); inp.value = ""; document.getElementById("new-member-peut").value = ""; err.textContent = ""; toggleAddMember(); renderMembers(); renderPeutGrid();
+  };
+  window.handleDeleteMember = async function(name) {
+    if (!isAdmin) return;
+    if (confirmDelete === name) { members = members.filter(m => m.name !== name); present.delete(name); confirmDelete = null; schedule = null; document.getElementById("confirm-hint").textContent = ""; await persistMembers(); renderMembers(); }
+    else { confirmDelete = name; document.getElementById("confirm-hint").textContent = 'Klik nogmaals op × bij "' + name + '" om te bevestigen.'; renderMembers(); }
+  };
+  document.body.addEventListener("click", e => { if (confirmDelete && !e.target.closest(".member-delete")) { confirmDelete = null; document.getElementById("confirm-hint").textContent = ""; renderMembers(); } });
+
+  window.renderPeutGrid = function() {
+    const grid = document.getElementById("peut-grid"); grid.innerHTML = "";
+    members.forEach(({ name, peut }) => {
+      const row = document.createElement("div"); row.className = "peut-row";
+      row.innerHTML = '<span class="peut-name">' + name + '</span><input class="peut-input" type="number" min="1" max="200" value="' + (peut||20) + '" onchange="updatePeut(\'' + name.replace(/'/g,"\\'") + '\', this.value)" /><span class="peut-label">car.</span>';
+      grid.appendChild(row);
+    });
+  };
+  window.updatePeut = async function(name, val) {
+    if (!isAdmin) return;
+    const v = Math.max(1, parseInt(val) || 20);
+    members = members.map(m => m.name === name ? { ...m, peut: v } : m);
+    await persistMembers(); renderMembers();
+  };
+
+  function showConfirm(title, body, okLabel, onOk) {
+    document.getElementById("confirm-title").textContent = title;
+    document.getElementById("confirm-body").textContent = body;
+    document.getElementById("confirm-ok-btn").textContent = okLabel;
+    const overlay = document.getElementById("confirm-overlay");
+    overlay.style.display = "flex";
+    document.getElementById("confirm-ok-btn").onclick = () => { overlay.style.display = "none"; onOk(); };
+    document.getElementById("confirm-cancel-btn").onclick = () => { overlay.style.display = "none"; };
+  }
+
+  window.generateSchedule = function() {
+    if (present.size < 2) return;
+    const doGenerate = () => { editSchemaMode = false; schedule = buildSchedule([...present]); saved = false; renderScheduleView(); switchView("schedule"); };
+    if (saved) {
+      const scoredCount = history[0]?.matches?.filter(m => m.score).length || 0;
+      showConfirm("Schema opnieuw maken?",
+        "Er is al een opgeslagen schema" + (scoredCount > 0 ? " met " + scoredCount + " ingevoerde score" + (scoredCount !== 1 ? "s" : "") : "") + ". Als je opnieuw genereert gaan die verloren.",
+        "Ja, nieuw schema maken", doGenerate);
+    } else { doGenerate(); }
+  };
+
+  window.regenerate = function() {
+    const doRegen = () => { schedule = buildSchedule([...present]); saved = false; renderScheduleView(); };
+    const scoredCount = saved ? (history[0]?.matches?.filter(m => m.score).length || 0) : 0;
+    if (schedule && scoredCount > 0) {
+      showConfirm("Schema opnieuw genereren?",
+        "Er zijn al " + scoredCount + " score" + (scoredCount !== 1 ? "s" : "") + " ingevoerd. Als je opnieuw genereert gaan die verloren.",
+        "Ja, opnieuw genereren", doRegen);
+    } else if (schedule && saved) {
+      showConfirm("Schema opnieuw genereren?", "Het huidige opgeslagen schema wordt vervangen door een nieuw schema.", "Ja, opnieuw genereren", doRegen);
+    } else { doRegen(); }
+  };
+  window.confirmSchedule = async function() {
+    if (!schedule || saved) return;
+    const session = { date: new Date().toISOString(), players: [...present], matches: schedule.matches.map(({ p1, p2 }) => ({ p1, p2 })), type: avondType };
+    if (avondType === "superfriday") {
+      sfHistory = [session, ...sfHistory];
+      await persistSfHistory();
+    } else {
+      history = [session, ...history];
+      await persistHistory();
+    }
+    saved = true; renderScheduleView();
+  };
+
+  function renderScheduleView() {
+    const emp = document.getElementById("schedule-empty"); const con = document.getElementById("schedule-content");
+    if (!schedule) { emp.style.display = "block"; con.style.display = "none"; return; }
+    emp.style.display = "none"; con.style.display = "block";
+    const pc = pairCountPeriod(saved); const cf = schedule.matches.filter(m => pc[matchKey(m.p1, m.p2)] > 0).length;
+    document.getElementById("schedule-badges").innerHTML = '<span class="badge badge-green">' + present.size + ' spelers</span><span class="badge badge-blue">' + schedule.matches.length + ' wedstrijden</span>' + (cf > 0 ? '<span class="badge badge-red">&#x26A0; ' + cf + ' herhal' + (cf===1?"ing":"ingen") + ' in periode</span>' : '<span class="badge badge-green">&#x2713; Geen herhalingen</span>');
+    const sb = document.getElementById("save-btn"); sb.textContent = saved ? "✓ Opgeslagen" : "💾 Bevestig & Sla Op"; sb.className = "btn-save" + (saved ? " saved" : ""); sb.disabled = saved;
+
+    // Show/hide edit button (only after saving)
+    const editBtn = document.getElementById("edit-schema-btn");
+    editBtn.style.display = saved ? "inline-flex" : "none";
+    editBtn.textContent = editSchemaMode ? "✓ Klaar" : "✏️ Bewerken";
+    editBtn.className = "btn " + (editSchemaMode ? "btn-gold" : "btn-gray");
+
+    const grid = document.getElementById("schedule-grid");
+    grid.innerHTML = "";
+    grid.className = "schedule-grid" + (editSchemaMode ? " edit-mode" : "");
+
+    const col = document.createElement("div"); col.className = "schedule-col";
+    col.innerHTML = '<div class="schedule-col-header"><strong>Wedstrijden</strong><span>' + schedule.matches.length + ' duels</span></div><div class="schedule-col-body">' +
+      schedule.matches.map((m, i) => {
+        const rep = pc[matchKey(m.p1, m.p2)] > 0;
+        const isSf = avondType === "superfriday";
+        const savedSession = isSf ? sfHistory[0] : history[0];
+        const sc = saved && savedSession?.matches[i]?.score;
+        const badge = sc ? '<span class="match-score-badge">' + sc.p1c + '/' + getPeut(m.p1) + ' · ' + sc.p2c + '/' + getPeut(m.p2) + '</span>' : (saved && !editSchemaMode ? '<span style="font-size:11px;color:#6a6a8a">▶ score invoeren</span>' : "");
+        const delBtn = editSchemaMode ? '<button class="match-card-del" onclick="event.stopPropagation();removeMatchFromSchema(' + i + ')" title="Verwijder wedstrijd">&#x2715;</button>' : "";
+        const clickable = saved && !editSchemaMode;
+        return '<div class="match-card' + (rep?" repeat":"") + (sc?" scored":"") + '" onclick="' + (clickable ? 'openLiveMatch(0,' + i + ',' + isSf + ')' : '') + '" style="' + (editSchemaMode ? 'cursor:default;' : '') + '">' +
+          '<div class="match-num">' + (i+1) + '.</div><div class="match-players"><div class="match-p">' + m.p1 + '<span class="match-peut">' + getPeut(m.p1) + ' car.</span></div><div class="match-vs">vs</div><div class="match-p">' + m.p2 + '<span class="match-peut">' + getPeut(m.p2) + ' car.</span></div></div>' +
+          (rep && !sc ? '<div class="match-warn">&#x26A0;</div>' : '') + badge + delBtn + '</div>';
+      }).join("") + '</div>';
+    grid.appendChild(col);
+
+    // Show + add button in edit mode
+    if (editSchemaMode && saved) {
+      const addBtn = document.createElement("button");
+      addBtn.className = "btn btn-green";
+      addBtn.style.cssText = "margin-top:12px;width:100%;padding:10px;font-size:14px;";
+      addBtn.innerHTML = "&#x2795; Wedstrijd toevoegen";
+      addBtn.onclick = openAddMatchPanel;
+      grid.appendChild(addBtn);
+    }
+
+    document.getElementById("schedule-hint").style.display = editSchemaMode ? "none" : "block";
+  }
+
+  window.toggleEditSchema = function() {
+    editSchemaMode = !editSchemaMode;
+    document.getElementById("add-match-panel").style.display = "none";
+    renderScheduleView();
+  };
+
+  window.removeMatchFromSchema = async function(idx) {
+    const h = avondType === "superfriday" ? sfHistory : history;
+    const session = h[0]; if (!session) return;
+    // Remove from schedule and from saved session
+    schedule.matches.splice(idx, 1);
+    session.matches.splice(idx, 1);
+    if (avondType === "superfriday") { await persistSfHistory(); } else { await persistHistory(); }
+    renderScheduleView();
+  };
+
+  function openAddMatchPanel() {
+    const panel = document.getElementById("add-match-panel");
+    panel.style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    // Fill dropdowns with all present players
+    const playerList = [...present].sort();
+    const makeOptions = (selectedIdx) => playerList.map((n, i) =>
+      '<option value="' + n + '"' + (i === selectedIdx ? ' selected' : '') + '>' + n + '</option>'
+    ).join("");
+    document.getElementById("add-match-p1").innerHTML = makeOptions(0);
+    document.getElementById("add-match-p2").innerHTML = makeOptions(1);
+
+    // Suggest players who appear least in current schedule
+    const matchCounts = {};
+    playerList.forEach(n => matchCounts[n] = 0);
+    schedule.matches.forEach(m => { matchCounts[m.p1] = (matchCounts[m.p1]||0)+1; matchCounts[m.p2] = (matchCounts[m.p2]||0)+1; });
+    const sorted = [...playerList].sort((a,b) => matchCounts[a] - matchCounts[b]);
+    if (sorted.length >= 2) {
+      document.getElementById("add-match-p1").value = sorted[0];
+      document.getElementById("add-match-p2").value = sorted[1];
+      updateAddMatchHint();
+    }
+
+    document.getElementById("add-match-p1").onchange = updateAddMatchHint;
+    document.getElementById("add-match-p2").onchange = updateAddMatchHint;
+  }
+
+  function updateAddMatchHint() {
+    const p1 = document.getElementById("add-match-p1").value;
+    const p2 = document.getElementById("add-match-p2").value;
+    const hintEl = document.getElementById("add-match-hint");
+    if (p1 === p2) { hintEl.style.color = "#c07070"; hintEl.textContent = "⚠ Kies twee verschillende spelers."; return; }
+    const matchCounts = {};
+    [...present].forEach(n => matchCounts[n] = 0);
+    schedule.matches.forEach(m => { matchCounts[m.p1] = (matchCounts[m.p1]||0)+1; matchCounts[m.p2] = (matchCounts[m.p2]||0)+1; });
+    const c1 = matchCounts[p1] || 0; const c2 = matchCounts[p2] || 0;
+    const alreadyPlaying = schedule.matches.some(m => (m.p1===p1&&m.p2===p2)||(m.p1===p2&&m.p2===p1));
+    hintEl.style.color = "#8a7a5a";
+    hintEl.textContent = p1 + " speelt al " + c1 + "× · " + p2 + " speelt al " + c2 + "×" + (alreadyPlaying ? " · ⚠ staan al tegenover elkaar" : "");
+  }
+
+  window.closeAddMatchPanel = function() {
+    document.getElementById("add-match-panel").style.display = "none";
+  };
+
+  window.addMatchToSchema = async function() {
+    const p1 = document.getElementById("add-match-p1").value;
+    const p2 = document.getElementById("add-match-p2").value;
+    if (!p1 || !p2 || p1 === p2) { document.getElementById("add-match-hint").style.color = "#c07070"; document.getElementById("add-match-hint").textContent = "⚠ Kies twee verschillende spelers."; return; }
+    const h = avondType === "superfriday" ? sfHistory : history;
+    const session = h[0]; if (!session) return;
+    schedule.matches.push({ p1, p2 });
+    session.matches.push({ p1, p2 });
+    if (avondType === "superfriday") { await persistSfHistory(); } else { await persistHistory(); }
+    document.getElementById("add-match-panel").style.display = "none";
+    renderScheduleView();
+  };
+
+  window.openLiveMatch = function(sIdx, mIdx, isSf) {
+    const h = isSf ? sfHistory : history;
+    const session = h[sIdx]; if (!session) return;
+    const match = session.matches[mIdx]; if (!match) return;
+    const ex = match.score;
+    liveMatch = { sIdx, mIdx, isSf: !!isSf, p1: match.p1, p2: match.p2, peut1: getPeut(match.p1), peut2: getPeut(match.p2), turns: ex ? (ex.turns || []) : [], done: false };
+    liveMatch.total1 = liveMatch.turns.reduce((s, t) => s + t.c1, 0);
+    liveMatch.total2 = liveMatch.turns.reduce((s, t) => s + t.c2, 0);
+    const t = liveMatch.turns.length;
+    liveMatch.done = ex != null || t >= MAX_TURNS || liveMatch.total1 >= liveMatch.peut1 || liveMatch.total2 >= liveMatch.peut2;
+    renderLiveMatch();
+    setLiveMode("live");
+    document.getElementById("live-match-overlay").classList.add("visible");
+  };
+  window.closeLiveMatch = function() { document.getElementById("live-match-overlay").classList.remove("visible"); liveMatch = null; };
+
+  window.setLiveMode = function(mode) {
+    document.getElementById("lm-mode-live").className = "lm-mode-btn" + (mode === "live" ? " active" : "");
+    document.getElementById("lm-mode-quick").className = "lm-mode-btn" + (mode === "quick" ? " active" : "");
+    document.getElementById("lm-live-section").style.display = mode === "live" ? "block" : "none";
+    document.getElementById("lm-quick-section").style.display = mode === "quick" ? "block" : "none";
+    if (mode === "quick" && liveMatch) {
+      document.getElementById("lm-q-label-p1").textContent = liveMatch.p1 + " (peut: " + liveMatch.peut1 + ")";
+      document.getElementById("lm-q-label-p2").textContent = liveMatch.p2 + " (peut: " + liveMatch.peut2 + ")";
+      document.getElementById("lm-q-error").textContent = "";
+    }
+  };
+
+  window.saveQuickResult = async function() {
+    if (!liveMatch) return;
+    const { sIdx, mIdx, isSf, p1, p2, peut1, peut2 } = liveMatch;
+    const car1 = parseInt(document.getElementById("lm-q-car-p1").value) || 0;
+    const car2 = parseInt(document.getElementById("lm-q-car-p2").value) || 0;
+    const turns1 = parseInt(document.getElementById("lm-q-turns-p1").value) || 0;
+    const turns2 = parseInt(document.getElementById("lm-q-turns-p2").value) || 0;
+    const top1 = parseInt(document.getElementById("lm-q-top-p1").value) || 0;
+    const top2 = parseInt(document.getElementById("lm-q-top-p2").value) || 0;
+    const errEl = document.getElementById("lm-q-error");
+
+    if (turns1 < 1 || turns2 < 1) { errEl.textContent = "Voer het aantal beurten in voor beide spelers."; return; }
+    if (turns1 > MAX_TURNS || turns2 > MAX_TURNS) { errEl.textContent = "Maximaal " + MAX_TURNS + " beurten per speler."; return; }
+    if (top1 > car1) { errEl.textContent = "Hoogste serie van " + p1 + " kan niet hoger zijn dan het totaal."; return; }
+    if (top2 > car2) { errEl.textContent = "Hoogste serie van " + p2 + " kan niet hoger zijn dan het totaal."; return; }
+
+    const pts1 = calcPoints(car1, peut1); const pts2 = calcPoints(car2, peut2);
+    const avg1 = parseFloat((car1 / turns1).toFixed(3)); const avg2 = parseFloat((car2 / turns2).toFixed(3));
+
+    // Build synthetic turns array encoding top series (for standings compatibility)
+    // We store a simplified turns array: one turn with the top serie, rest distributed evenly
+    const makeTurns = (total, nTurns, topSerie) => {
+      const turns = [{ c1: 0, c2: 0 }]; // placeholder — quick mode uses summary fields
+      return turns;
+    };
+
+    const scoreData = {
+      p1c: car1, p2c: car2,
+      turns: [], // no per-turn data in quick mode
+      p1pts: pts1, p2pts: pts2,
+      p1avg: avg1, p2avg: avg2,
+      p1topSerie: top1, p2topSerie: top2,
+      p1turns: turns1, p2turns: turns2,
+      peut1, peut2,
+      quickEntry: true
+    };
+
+    if (isSf) { sfHistory[sIdx].matches[mIdx].score = scoreData; await persistSfHistory(); renderSuperFriday(); }
+    else { history[sIdx].matches[mIdx].score = scoreData; await persistHistory(); renderScheduleView(); renderStandings(); }
+    closeLiveMatch();
+  };
+
+  function renderLiveMatch() {
+    if (!liveMatch) return;
+    const { p1, p2, peut1, peut2, turns, total1, total2, done } = liveMatch;
+    const t = turns.length;
+    document.getElementById("lm-title").textContent = p1 + " vs " + p2;
+    document.getElementById("lm-beurt-nr").textContent = t;
+    document.getElementById("lm-label-p1").textContent = p1;
+    document.getElementById("lm-label-p2").textContent = p2;
+    document.getElementById("lm-log-h1").textContent = p1.split(" ")[0];
+    document.getElementById("lm-log-h2").textContent = p2.split(" ")[0];
+    const pct1 = Math.min(100, Math.round(total1/peut1*100)); const pct2 = Math.min(100, Math.round(total2/peut2*100));
+    const d1 = total1 >= peut1; const d2 = total2 >= peut2;
+    document.getElementById("lm-players").innerHTML =
+      '<div class="lm-player' + (d1?" winner":"") + '"><div class="lm-player-name">' + p1 + '</div><div class="lm-player-peut">Peut: ' + peut1 + '</div><div class="lm-score-big">' + total1 + '</div><div class="lm-score-sub">' + pct1 + '% · ' + calcPoints(total1,peut1) + ' pt</div><div class="lm-progress-bar"><div class="lm-progress-fill' + (d1?" done":"") + '" style="width:' + pct1 + '%"></div></div></div>' +
+      '<div class="lm-player' + (d2?" winner":"") + '"><div class="lm-player-name">' + p2 + '</div><div class="lm-player-peut">Peut: ' + peut2 + '</div><div class="lm-score-big">' + total2 + '</div><div class="lm-score-sub">' + pct2 + '% · ' + calcPoints(total2,peut2) + ' pt</div><div class="lm-progress-bar"><div class="lm-progress-fill' + (d2?" done":"") + '" style="width:' + pct2 + '%"></div></div></div>';
+    if (turns.length > 0) {
+      document.getElementById("lm-turns-log").style.display = "block";
+      let r1 = 0, r2 = 0;
+      document.getElementById("lm-log-body").innerHTML = turns.map((tu, i) => { r1+=tu.c1; r2+=tu.c2; return '<tr><td>'+(i+1)+'</td><td>'+tu.c1+'</td><td>'+tu.c2+'</td><td>'+r1+'</td><td>'+r2+'</td></tr>'; }).join("");
+    } else document.getElementById("lm-turns-log").style.display = "none";
+    if (!done) {
+      document.getElementById("lm-input-section").style.display = "block";
+      document.getElementById("lm-finish-section").style.display = "none";
+      document.getElementById("lm-input-label").textContent = "Voer caramboles in voor beurt " + (t+1) + ":";
+      document.getElementById("lm-input-p1").value = "";
+      document.getElementById("lm-input-p2").value = "";
+      document.getElementById("lm-undo-btn").disabled = turns.length === 0;
+      document.getElementById("lm-next-btn").textContent = t >= MAX_TURNS - 1 ? "Wedstrijd afsluiten →" : "Beurt vastleggen →";
+    } else {
+      document.getElementById("lm-input-section").style.display = "none";
+      document.getElementById("lm-finish-section").style.display = "block";
+      const pts1 = calcPoints(total1,peut1); const pts2 = calcPoints(total2,peut2);
+      const avg1 = t > 0 ? (total1/t).toFixed(2) : "–"; const avg2 = t > 0 ? (total2/t).toFixed(2) : "–";
+      document.getElementById("lm-result-row").innerHTML =
+        '<div class="lm-result-card' + (pts1>=pts2?" winner":"") + '"><div class="lm-result-name">' + p1 + '</div><div class="lm-result-pts">' + pts1 + '</div><div class="lm-result-pts-label">wedstrijdpunten</div><div class="lm-result-detail">' + total1 + '/' + peut1 + ' car. · gem. ' + avg1 + '</div></div>' +
+        '<div class="lm-result-card' + (pts2>pts1?" winner":"") + '"><div class="lm-result-name">' + p2 + '</div><div class="lm-result-pts">' + pts2 + '</div><div class="lm-result-pts-label">wedstrijdpunten</div><div class="lm-result-detail">' + total2 + '/' + peut2 + ' car. · gem. ' + avg2 + '</div></div>';
+    }
+  }
+
+  window.nextTurn = function() {
+    if (!liveMatch || liveMatch.done) return;
+    const c1 = parseInt(document.getElementById("lm-input-p1").value) || 0;
+    const c2 = parseInt(document.getElementById("lm-input-p2").value) || 0;
+    liveMatch.turns.push({ c1, c2 }); liveMatch.total1 += c1; liveMatch.total2 += c2;
+    if (liveMatch.turns.length >= MAX_TURNS || liveMatch.total1 >= liveMatch.peut1 || liveMatch.total2 >= liveMatch.peut2) liveMatch.done = true;
+    renderLiveMatch();
+  };
+  window.undoTurn = function() {
+    if (!liveMatch || !liveMatch.turns.length) return;
+    const last = liveMatch.turns.pop(); liveMatch.total1 -= last.c1; liveMatch.total2 -= last.c2; liveMatch.done = false; renderLiveMatch();
+  };
+  window.saveMatchResult = async function() {
+    if (!liveMatch) return;
+    const { sIdx, mIdx, isSf, p1, p2, peut1, peut2, turns, total1, total2 } = liveMatch;
+    const t = turns.length; const pts1 = calcPoints(total1,peut1); const pts2 = calcPoints(total2,peut2);
+    const scoreData = { p1c: total1, p2c: total2, turns, p1pts: pts1, p2pts: pts2, p1avg: t>0 ? parseFloat((total1/t).toFixed(3)) : 0, p2avg: t>0 ? parseFloat((total2/t).toFixed(3)) : 0, peut1, peut2 };
+    if (isSf) { sfHistory[sIdx].matches[mIdx].score = scoreData; await persistSfHistory(); renderSuperFriday(); }
+    else { history[sIdx].matches[mIdx].score = scoreData; await persistHistory(); renderScheduleView(); renderStandings(); }
+    closeLiveMatch();
+  };
+
+  let standingsTab = "period";
+  window.switchStandingsTab = function(tab) {
+    standingsTab = tab;
+    document.querySelectorAll(".standings-tab").forEach((b, i) => b.classList.toggle("active", ["period","season"][i] === tab));
+    document.getElementById("standings-period").style.display = tab === "period" ? "block" : "none";
+    document.getElementById("standings-season").style.display = tab === "season" ? "block" : "none";
+  };
+
+  function computeStandings(sessions) {
+    const stats = {};
+    const init = (n) => { if (!stats[n]) stats[n] = { name: n, games: 0, wins: 0, pts: 0, car: 0, turns: 0, topSerie: 0 }; };
+    for (const s of sessions) {
+      for (const m of s.matches) {
+        if (!m.score) continue;
+        init(m.p1); init(m.p2);
+        stats[m.p1].games++; stats[m.p2].games++;
+        stats[m.p1].pts += m.score.p1pts; stats[m.p2].pts += m.score.p2pts;
+        stats[m.p1].car += m.score.p1c; stats[m.p2].car += m.score.p2c;
+        if (m.score.p1pts > m.score.p2pts) stats[m.p1].wins++; else if (m.score.p2pts > m.score.p1pts) stats[m.p2].wins++;
+        if (m.score.quickEntry) {
+          stats[m.p1].turns += m.score.p1turns || 0;
+          stats[m.p2].turns += m.score.p2turns || 0;
+          if ((m.score.p1topSerie || 0) > stats[m.p1].topSerie) stats[m.p1].topSerie = m.score.p1topSerie;
+          if ((m.score.p2topSerie || 0) > stats[m.p2].topSerie) stats[m.p2].topSerie = m.score.p2topSerie;
+        } else if (m.score.turns && m.score.turns.length) {
+          stats[m.p1].turns += m.score.turns.length;
+          stats[m.p2].turns += m.score.turns.length;
+          const best1 = Math.max(...m.score.turns.map(t => t.c1));
+          const best2 = Math.max(...m.score.turns.map(t => t.c2));
+          if (best1 > stats[m.p1].topSerie) stats[m.p1].topSerie = best1;
+          if (best2 > stats[m.p2].topSerie) stats[m.p2].topSerie = best2;
+        }
+      }
+    }
+    return Object.values(stats).sort((a, b) => b.pts - a.pts || b.wins - a.wins);
+  }
+
+  function renderStandingsTable(id, rows) {
+    const t = document.getElementById(id);
+    if (!rows.length) { t.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#4a4a5a;padding:30px">Nog geen gescoorde wedstrijden</td></tr>'; return; }
+    const medals = ["🥇","🥈","🥉"];
+    t.innerHTML = '<thead><tr><th>#</th><th>Speler</th><th class="num">Punten</th><th class="num">Wedstr.</th><th class="num">Caramboles</th><th class="num">Gem./beurt</th><th class="num">Hoogste serie</th></tr></thead><tbody>' +
+      rows.map((r, i) => '<tr><td>' + (medals[i] || (i+1)) + '</td><td>' + r.name + '</td><td class="pts">' + r.pts + '</td><td class="num">' + r.games + '</td><td class="num">' + r.car + '</td><td class="num">' + (r.turns > 0 ? (r.car/r.turns).toFixed(2) : "–") + '</td><td class="num" style="color:#D4A017;font-weight:bold">' + (r.topSerie || "–") + '</td></tr>').join("") + '</tbody>';
+  }
+
+  window.renderStandings = function() {
+    const cutoff = getCutoff();
+    renderStandingsTable("table-period", computeStandings(history.filter(s => new Date(s.date) >= cutoff)));
+    renderStandingsTable("table-season", computeStandings(history));
+  };
+
+  function renderPeriodPanel() {
+    document.getElementById("period-weeks-slider").value = periodWeeks;
+    document.getElementById("period-weeks-label").textContent = periodWeeks + " weken";
+    document.getElementById("period-save-btn").style.display = "none";
+    const cutoff = getCutoff(); const inPeriod = history.filter(s => new Date(s.date) >= cutoff).length;
+    const endDate = periodStartDate ? new Date(periodStartDate.getTime() + periodWeeks * 7 * 86400000) : null;
+    const startStr = cutoff.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+    const endStr = endDate ? endDate.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : null;
+    document.getElementById("period-start-info").innerHTML = periodStartDate
+      ? "<strong>Huidige periode:</strong> gestart op " + startStr + (endStr ? " · loopt tot " + endStr : "") + "<br><strong>" + inPeriod + "</strong> avond" + (inPeriod!==1?"en":"") + " gespeeld."
+      : "<strong>Lopend venster:</strong> de afgelopen " + periodWeeks + " weken tellen mee.<br>Vanaf " + startStr + " · <strong>" + inPeriod + "</strong> avond" + (inPeriod!==1?"en":"") + " in dit venster.";
+  }
+  window.onSliderChange = function(v) { document.getElementById("period-weeks-label").textContent = v + " weken"; document.getElementById("period-save-btn").style.display = parseInt(v) !== periodWeeks ? "inline-block" : "none"; };
+  window.savePeriodWeeks = async function() { if (!isAdmin) return; periodWeeks = parseInt(document.getElementById("period-weeks-slider").value); await persistSettings(); renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); };
+  window.showNewPeriodConfirm = function() { if (!isAdmin) return; document.getElementById("new-period-confirm").classList.add("visible"); };
+  window.hideNewPeriodConfirm = function() { document.getElementById("new-period-confirm").classList.remove("visible"); };
+  window.startNewPeriod = async function() { periodStartDate = new Date(); await persistSettings(); hideNewPeriodConfirm(); renderPeriodPanel(); renderHistory(); renderScheduleView(); renderStandings(); };
+
+  window.renderHistory = function() {
+    const cutoff = getCutoff(); renderPeriodPanel();
+    const emp = document.getElementById("history-empty"); const top = document.getElementById("history-topbar"); const lst = document.getElementById("history-list");
+    if (!history.length) { emp.style.display = "block"; top.style.display = "none"; lst.innerHTML = ""; return; }
+    emp.style.display = "none"; top.style.display = "flex";
+    document.getElementById("history-count").textContent = history.length + " gespeelde avond" + (history.length!==1?"en":"");
+    lst.innerHTML = history.map((s, idx) => {
+      const d = new Date(s.date); const inp = d >= cutoff; const sc = s.matches.filter(m => m.score).length;
+      const ds = d.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const delBtn = isAdmin ? '<button class="btn-delete-session" onclick="deleteSession(' + idx + ')">✕</button>' : "";
+      return '<div class="history-session' + (inp?"":" old") + '"><div class="history-header"><div><span class="history-date">' + ds + '</span>' + (inp ? '<span class="history-period-tag">huidige periode</span>' : "") + '</div><div class="history-meta"><span>' + (s.players?.length||"?") + ' spl. · ' + s.matches.length + ' wedstr.' + (sc ? ' · ' + sc + ' gescoord' : "") + '</span>' + delBtn + '</div></div>' +
+        '<div class="history-body">' + s.matches.map(m => '<span class="history-match' + (m.score?" has-score":"") + '">' + m.p1 + ' vs ' + m.p2 + (m.score ? ' (' + m.score.p1c + '–' + m.score.p2c + ')' : "") + '</span>').join("") + '</div></div>';
+    }).join("");
+  };
+  window.deleteSession = async function(idx) { if (!isAdmin) return; history = history.filter((_, i) => i !== idx); await persistHistory(); renderHistory(); renderStandings(); };
+
+  window.renderSuperFriday = function() {
+    const empEl = document.getElementById("sf-empty");
+    const cardEl = document.getElementById("sf-standings-card");
+    const listEl = document.getElementById("sf-history-list");
+    const countEl = document.getElementById("sf-history-count");
+
+    if (!sfHistory.length) { empEl.style.display = "block"; cardEl.style.display = "none"; listEl.innerHTML = ""; countEl.textContent = ""; return; }
+    empEl.style.display = "none"; cardEl.style.display = "block";
+    countEl.textContent = sfHistory.length + " Super Friday avond" + (sfHistory.length !== 1 ? "en" : "") + " gespeeld";
+
+    // Standings
+    renderStandingsTable("table-superfriday", computeStandings(sfHistory));
+
+    // History list
+    listEl.innerHTML = sfHistory.map((s, idx) => {
+      const d = new Date(s.date);
+      const ds = d.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const sc = s.matches.filter(m => m.score).length;
+      const delBtn = isAdmin ? '<button class="btn-delete-session" onclick="deleteSfSession(' + idx + ')">✕</button>' : "";
+      return '<div class="history-session" style="border-color:#8B691433;">' +
+        '<div class="history-header" style="background:linear-gradient(135deg,#1a1008,#1e1810);">' +
+        '<div><span class="history-date">✨ ' + ds + '</span></div>' +
+        '<div class="history-meta"><span>' + (s.players?.length||"?") + ' spl. · ' + s.matches.length + ' wedstr.' + (sc ? ' · ' + sc + ' gescoord' : '') + '</span>' + delBtn + '</div></div>' +
+        '<div class="history-body">' + s.matches.map(m => '<span class="history-match' + (m.score?" has-score":"") + '" style="cursor:pointer" onclick="openLiveMatch(' + idx + ',' + s.matches.indexOf(m) + ',true)">' + m.p1 + ' vs ' + m.p2 + (m.score ? ' (' + m.score.p1c + '–' + m.score.p2c + ')' : '') + '</span>').join("") + '</div></div>';
+    }).join("");
+  };
+
+  window.deleteSfSession = async function(idx) {
+    if (!isAdmin) return;
+    sfHistory = sfHistory.filter((_, i) => i !== idx);
+    await persistSfHistory(); renderSuperFriday();
+  };
+
+  init();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('SW geregistreerd:', reg.scope);
+    }).catch(err => console.log('SW fout:', err));
+  });
+}
+</script>
+</body>
+</html>
